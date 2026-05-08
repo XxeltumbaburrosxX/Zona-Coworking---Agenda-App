@@ -185,6 +185,7 @@ export default function App() {
   const [showIdentityModal, setShowIdentityModal] = useState(false);
 
   const [events, setEvents] = useState<EventData[]>([]);
+  const [isEventsLoading, setIsEventsLoading] = useState(true);
   const [inventory, setInventory] = useState<Inventory>({ coffeeStatus: 'green', waterStatus: 'green' });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -263,6 +264,7 @@ export default function App() {
         liveEvents.push({ id: doc.id, ...doc.data() } as EventData);
       });
       setEvents(liveEvents);
+      setIsEventsLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'events');
     });
@@ -387,10 +389,16 @@ export default function App() {
 
     try {
       if (editingEventId) {
-        await updateDoc(doc(db, 'events', editingEventId), payload as any);
+        // Optimistic update, run in background
+        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(error => {
+          console.error("Background sync error (update):", error);
+        });
         triggerAppNotification('Evento Actualizado', `Modificado: ${payload.eventName}`, 'success');
       } else {
-        await addDoc(collection(db, 'events'), payload);
+        // Optimistic create, run in background
+        addDoc(collection(db, 'events'), payload).catch(error => {
+          console.error("Background sync error (create):", error);
+        });
         triggerAppNotification('Evento Confirmado', `Reservado: ${payload.eventName}`, 'success');
         sendRealNotification('✅ Nuevo Evento Agendado', { body: `${payload.eventName} por ${payload.clientName} en ${ROOMS.find(r=>r.id===payload.roomId)?.name}.` });
       }
@@ -405,15 +413,17 @@ export default function App() {
       });
       setEditingEventId(null);
     } catch (error) {
-      triggerAppNotification('Error', `No se pudo ${editingEventId ? 'actualizar' : 'agendar'} el evento.`, 'error');
-      handleFirestoreError(error, editingEventId ? OperationType.UPDATE : OperationType.CREATE, 'events');
+      triggerAppNotification('Error', `Error inesperado: No se pudo procesar la solicitud.`, 'error');
     }
   };
 
   const handleDeleteEvent = async (id: string) => {
     if (!db) return;
     try {
-      await deleteDoc(doc(db, 'events', id));
+      // Optimistic delete, run in background
+      deleteDoc(doc(db, 'events', id)).catch(error => {
+        console.error("Background sync error (delete):", error);
+      });
       triggerAppNotification('Evento Eliminado', 'La reserva ha sido cancelada con éxito.', 'success');
       setEventToDelete(null);
       if (editingEventId === id) {
@@ -421,8 +431,7 @@ export default function App() {
         setActiveTab('agenda');
       }
     } catch (error) {
-      triggerAppNotification('Error', 'No se pudo eliminar el evento.', 'error');
-      handleFirestoreError(error, OperationType.DELETE, 'events');
+      triggerAppNotification('Error', 'Error inesperado: No se pudo procesar la solicitud.', 'error');
     }
   };
 
@@ -661,40 +670,49 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-[24px] shadow-lg shadow-blue-900/5 border border-gray-100 overflow-hidden w-full">
-                 <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/50">
-                   {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                     <div key={d} className="text-center text-[10px] md:text-xs font-bold text-gray-400 py-3 uppercase tracking-wider">{d}</div>
-                   ))}
-                 </div>
-                 <div className="grid grid-cols-7 auto-rows-[80px] md:auto-rows-[120px] bg-gray-100 gap-px">
-                   {blanks.map((_, i) => <div key={`blank-${i}`} className="bg-white min-h-[80px] md:min-h-[120px]" />)}
-                   {days.map(day => {
-                      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                      const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => a.startTime.localeCompare(b.startTime));
-                      const isToday = new Date().toISOString().split('T')[0] === dateStr;
-                      const isSelected = selectedDateStr === dateStr;
-                      
-                      return (
-                        <div key={day} onClick={() => setSelectedDateStr(dateStr)} className={`bg-white p-2 md:p-3 transition-colors hover:bg-blue-50/50 cursor-pointer overflow-hidden ${isSelected ? 'ring-[3px] ring-zona-orange ring-inset bg-orange-50/20 z-10 relative' : ''}`}>
-                           <div className={`font-bold text-xs md:text-sm mb-1.5 md:mb-2 w-6 h-6 md:w-7 md:h-7 mx-auto md:mx-0 flex items-center justify-center rounded-full ${isToday ? 'bg-zona-orange text-white shadow-md' : isSelected ? 'bg-zona-blue text-white' : 'text-gray-500'}`}>{day}</div>
-                           <div className="flex flex-wrap gap-1.5 mt-1 justify-center md:justify-start">
-                             {dayEvents.map(e => {
-                               const room = ROOMS.find(r => r.id === e.roomId);
-                               return (
-                                 <div key={e.id} onClick={(evt) => { evt.stopPropagation(); handleEventClick(e); }} className="relative group cursor-pointer">
-                                   <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-sm hover:scale-150 transition-transform" style={{ backgroundColor: e.createdBy_Color || e.userColor || '#9ca3af' }} />
-                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max bg-gray-900/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-md shadow-xl z-50 pointer-events-none transition-all">
-                                      Creado por {e.createdBy_Name || e.creatorName || 'Usuario'}
-                                   </div>
-                                 </div>
-                               );
-                             })}
-                           </div>
-                        </div>
-                      )
-                   })}
-                 </div>
+              <div className="bg-white rounded-[24px] shadow-lg shadow-blue-900/5 border border-gray-100 overflow-hidden w-full min-h-[400px] relative">
+                 {isEventsLoading ? (
+                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zona-orange mb-4"></div>
+                     <p className="text-gray-500 font-medium">Sincronizando con reservas...</p>
+                   </div>
+                 ) : (
+                   <>
+                     <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/50">
+                       {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
+                         <div key={d} className="text-center text-[10px] md:text-xs font-bold text-gray-400 py-3 uppercase tracking-wider">{d}</div>
+                       ))}
+                     </div>
+                     <div className="grid grid-cols-7 auto-rows-[80px] md:auto-rows-[120px] bg-gray-100 gap-px">
+                       {blanks.map((_, i) => <div key={`blank-${i}`} className="bg-white min-h-[80px] md:min-h-[120px]" />)}
+                       {days.map(day => {
+                          const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                          const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => a.startTime.localeCompare(b.startTime));
+                          const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                          const isSelected = selectedDateStr === dateStr;
+                          
+                          return (
+                            <div key={day} onClick={() => setSelectedDateStr(dateStr)} className={`bg-white p-2 md:p-3 transition-colors hover:bg-blue-50/50 cursor-pointer overflow-hidden ${isSelected ? 'ring-[3px] ring-zona-orange ring-inset bg-orange-50/20 z-10 relative' : ''}`}>
+                               <div className={`font-bold text-xs md:text-sm mb-1.5 md:mb-2 w-6 h-6 md:w-7 md:h-7 mx-auto md:mx-0 flex items-center justify-center rounded-full ${isToday ? 'bg-zona-orange text-white shadow-md' : isSelected ? 'bg-zona-blue text-white' : 'text-gray-500'}`}>{day}</div>
+                               <div className="flex flex-wrap gap-1.5 mt-1 justify-center md:justify-start">
+                                 {dayEvents.map(e => {
+                                   const room = ROOMS.find(r => r.id === e.roomId);
+                                   return (
+                                     <div key={e.id} onClick={(evt) => { evt.stopPropagation(); handleEventClick(e); }} className="relative group cursor-pointer">
+                                       <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-sm hover:scale-150 transition-transform" style={{ backgroundColor: e.createdBy_Color || e.userColor || '#9ca3af' }} />
+                                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max bg-gray-900/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-md shadow-xl z-50 pointer-events-none transition-all">
+                                          Creado por {e.createdBy_Name || e.creatorName || 'Usuario'}
+                                       </div>
+                                     </div>
+                                   );
+                                 })}
+                               </div>
+                            </div>
+                          )
+                       })}
+                     </div>
+                   </>
+                 )}
               </div>
 
               {/* Eventos del Día Seleccionado */}
