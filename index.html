@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Zona Coworking Dashboard</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>console.log("App Inicializada correctamente - HTML Start");</script>
+    <script type="module" src="/src/main.tsx" defer></script>
+    <script>
+      // Service Worker Reset / Update to prevent "Cache Ghosting"
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              registration.update();
+              console.log('SW updated: ', registration);
+            }
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
+

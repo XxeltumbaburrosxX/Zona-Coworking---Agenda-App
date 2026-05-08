@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Events
+    function isValidEvent(data) {
+      return data.keys().hasAll(['eventName', 'clientName', 'type', 'roomId', 'attendees', 'date', 'startTime', 'endTime', 'createdBy'])
+        && data.eventName is string && data.eventName.size() > 0 && data.eventName.size() <= 100
+        && data.clientName is string && data.clientName.size() > 0 && data.clientName.size() <= 100
+        && data.type is string && data.type.size() > 0 && data.type.size() <= 100
+        && data.roomId is string && data.roomId.size() > 0 && data.roomId.size() <= 100
+        && data.attendees is number && data.attendees > 0 && data.attendees <= 500
+        && data.date is string && data.date.size() == 10
+        && data.startTime is string && data.startTime.size() == 5
+        && data.endTime is string && data.endTime.size() == 5
+        && data.createdBy == request.auth.uid;
+    }
+
+    match /events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId);
+      allow list: if isSignedIn(); // Open to team
+
+      allow create: if isSignedIn() 
+        && isValidId(eventId) 
+        && isValidEvent(incoming());
+
+      allow update: if isSignedIn() 
+        && isValidId(eventId)
+        && incoming().createdBy == existing().createdBy // immutable
+        && isValidEvent(incoming());
+
+      allow delete: if isSignedIn() 
+        && isValidId(eventId); // For coworking tool, allow any signed-in user to delete or limit to owner? Keep it simple: team can delete
+    }
+
+    // Inventory
+    function isValidInventory(data) {
+      return data.keys().hasAll(['coffeeStatus', 'waterStatus'])
+        && data.coffeeStatus is string && data.coffeeStatus.size() >= 3 && data.coffeeStatus.size() <= 10
+        && data.waterStatus is string && data.waterStatus.size() >= 3 && data.waterStatus.size() <= 10;
+    }
+
+    match /inventory/{inventoryId} {
+      // Only one doc realistically, e.g., 'dispensers'
+      allow get: if isSignedIn() && isValidId(inventoryId);
+      allow list: if isSignedIn();
+      
+      allow create: if isSignedIn()
+        && isValidId(inventoryId)
+        && isValidInventory(incoming());
+
+      allow update: if isSignedIn()
+        && isValidId(inventoryId)
+        && isValidInventory(incoming())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['coffeeStatus', 'waterStatus']);
+    }
+  }
+}

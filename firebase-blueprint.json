@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Event": {
+      "title": "Event",
+      "description": "A scheduled event in the coworking space.",
+      "type": "object",
+      "properties": {
+        "eventName": { "type": "string", "description": "Name of the event" },
+        "clientName": { "type": "string", "description": "Name of the client/company" },
+        "type": { "type": "string", "description": "Type of event" },
+        "roomId": { "type": "string", "description": "ID of the reserved room" },
+        "attendees": { "type": "number", "description": "Number of attendees" },
+        "date": { "type": "string", "description": "Date in YYYY-MM-DD format" },
+        "startTime": { "type": "string", "description": "Start time in HH:MM format" },
+        "endTime": { "type": "string", "description": "End time in HH:MM format" },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "sillas": { "type": "boolean" },
+            "mesas": { "type": "boolean" },
+            "cubiertos": { "type": "boolean" },
+            "agua": { "type": "boolean" },
+            "cafe": { "type": "boolean" },
+            "servilletas": { "type": "boolean" }
+          }
+        },
+        "roomLayout": { "type": "string", "description": "Layout strategy" },
+        "createdBy": { "type": "string", "description": "UID of the user who created it" },
+        "createdAt": { "type": "number", "description": "Server timestamp of creation" }
+      },
+      "required": ["eventName", "clientName", "type", "roomId", "attendees", "date", "startTime", "endTime", "createdBy", "createdAt"]
+    },
+    "User": {
+      "title": "User Identity",
+      "description": "User identity profile including preferred color.",
+      "type": "object",
+      "properties": {
+        "colorSelected": { "type": "boolean" },
+        "color": { "type": "string" },
+        "displayName": { "type": "string" }
+      },
+      "required": ["colorSelected"]
+    },
+    "Inventory": {
+      "title": "Inventory",
+      "description": "Logistics status for coffee and water.",
+      "type": "object",
+      "properties": {
+        "coffeeStatus": { "type": "string" },
+        "waterStatus": { "type": "string" },
+        "updatedAt": { "type": "number" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["coffeeStatus", "waterStatus", "updatedAt", "updatedBy"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user identity profiles."
+    },
+    "/events/{eventId}": {
+      "schema": { "$ref": "#/entities/Event" },
+      "description": "Stores scheduled events for the rooms."
+    },
+    "/inventory/{inventoryId}": {
+      "schema": { "$ref": "#/entities/Inventory" },
+      "description": "Stores current status of logistic resources like coffee and water."
+    }
+  }
+}
