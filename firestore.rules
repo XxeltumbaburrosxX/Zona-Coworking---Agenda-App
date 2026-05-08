@@ -39,7 +39,7 @@ service cloud.firestore {
         && data.createdBy == request.auth.uid;
     }
 
-    match /eventos/{eventId} {
+    match /events/{eventId} {
       allow get: if isSignedIn() && isValidId(eventId);
       allow list: if isSignedIn(); // Open to team
 

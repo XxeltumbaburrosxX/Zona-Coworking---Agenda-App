@@ -243,7 +243,7 @@ export default function App() {
   useEffect(() => {
     if (!user || !db) return;
 
-    const q = query(collection(db, 'eventos'));
+    const q = query(collection(db, 'events'));
     const unsubEvents = onSnapshot(q, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
@@ -264,7 +264,7 @@ export default function App() {
       });
       setEvents(liveEvents);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'eventos');
+      handleFirestoreError(error, OperationType.GET, 'events');
     });
 
     const inventoryRef = doc(db, 'inventory', 'dispensers');
@@ -387,10 +387,10 @@ export default function App() {
 
     try {
       if (editingEventId) {
-        await updateDoc(doc(db, 'eventos', editingEventId), payload as any);
+        await updateDoc(doc(db, 'events', editingEventId), payload as any);
         triggerAppNotification('Evento Actualizado', `Modificado: ${payload.eventName}`, 'success');
       } else {
-        await addDoc(collection(db, 'eventos'), payload);
+        await addDoc(collection(db, 'events'), payload);
         triggerAppNotification('Evento Confirmado', `Reservado: ${payload.eventName}`, 'success');
         sendRealNotification('✅ Nuevo Evento Agendado', { body: `${payload.eventName} por ${payload.clientName} en ${ROOMS.find(r=>r.id===payload.roomId)?.name}.` });
       }
@@ -406,14 +406,14 @@ export default function App() {
       setEditingEventId(null);
     } catch (error) {
       triggerAppNotification('Error', `No se pudo ${editingEventId ? 'actualizar' : 'agendar'} el evento.`, 'error');
-      handleFirestoreError(error, editingEventId ? OperationType.UPDATE : OperationType.CREATE, 'eventos');
+      handleFirestoreError(error, editingEventId ? OperationType.UPDATE : OperationType.CREATE, 'events');
     }
   };
 
   const handleDeleteEvent = async (id: string) => {
     if (!db) return;
     try {
-      await deleteDoc(doc(db, 'eventos', id));
+      await deleteDoc(doc(db, 'events', id));
       triggerAppNotification('Evento Eliminado', 'La reserva ha sido cancelada con éxito.', 'success');
       setEventToDelete(null);
       if (editingEventId === id) {
@@ -422,7 +422,7 @@ export default function App() {
       }
     } catch (error) {
       triggerAppNotification('Error', 'No se pudo eliminar el evento.', 'error');
-      handleFirestoreError(error, OperationType.DELETE, 'eventos');
+      handleFirestoreError(error, OperationType.DELETE, 'events');
     }
   };
 
