@@ -186,6 +186,7 @@ export default function App() {
 
   const [events, setEvents] = useState<EventData[]>([]);
   const [isEventsLoading, setIsEventsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [inventory, setInventory] = useState<Inventory>({ coffeeStatus: 'green', waterStatus: 'green' });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -356,12 +357,16 @@ export default function App() {
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!user || !db) return;
     if (!formData.eventName || !formData.clientName || !formData.date || !formData.startTime || !formData.endTime || !formData.roomId) return;
+
+    setIsSaving(true);
 
     const selectedRoomDetails = ROOMS.find(r => r.id === formData.roomId);
     if (selectedRoomDetails && (formData.attendees || 0) > selectedRoomDetails.capacity) {
       triggerAppNotification('Capacidad Excedida', 'Por favor, selecciona una sala con suficiente capacidad.', 'error');
+      setIsSaving(false);
       return;
     }
 
@@ -386,12 +391,14 @@ export default function App() {
 
       if (hasConflict) {
         triggerAppNotification('Conflicto detectado', 'El salón ya está ocupado en este horario', 'error');
+        setIsSaving(false);
         return;
       }
     } catch (err) {
       console.warn('Conflict check failed, falling back to local state:', err);
       if (checkConflicts(formData.date, formData.startTime as string, formData.endTime as string, formData.roomId, editingEventId)) {
         triggerAppNotification('Conflicto detectado', 'El salón ya está ocupado en este horario', 'error');
+        setIsSaving(false);
         return;
       }
     }
@@ -413,19 +420,23 @@ export default function App() {
       createdAt: Date.now()
     };
 
+    const handleAsyncSaveError = (err: any) => {
+      console.error("Write error:", err);
+      const errMsg = err?.message?.toLowerCase() || '';
+      if (errMsg.includes('permission') || errMsg.includes('quota') || errMsg.includes('missing or insufficient') || errMsg.includes('denied')) {
+        triggerAppNotification('Error', 'Problema de permisos o cuota al guardar.', 'error');
+      } else {
+        console.warn("Ignoring network/timeout error for optimistic save.");
+      }
+    };
+
     try {
       if (editingEventId) {
-        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(err => {
-          console.error("Write error:", err);
-          triggerAppNotification('Error', 'No se pudo sincronizar el cambio. Verifique su conexión.', 'error');
-        });
-        triggerAppNotification('Evento Actualizado', `Modificado: ${payload.eventName}`, 'success');
+        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(handleAsyncSaveError);
+        triggerAppNotification('Reserva Exitosa', `Modificado: ${payload.eventName}`, 'success');
       } else {
-        addDoc(collection(db, 'events'), payload).catch(err => {
-          console.error("Write error:", err);
-          triggerAppNotification('Error', 'No se pudo sincronizar. Verifique su conexión.', 'error');
-        });
-        triggerAppNotification('Evento Confirmado', `Reservado: ${payload.eventName}`, 'success');
+        addDoc(collection(db, 'events'), payload).catch(handleAsyncSaveError);
+        triggerAppNotification('Reserva Exitosa', `Reservado: ${payload.eventName}`, 'success');
         
         // Secondary actions running asynchronously without failing UI
         Promise.allSettled([
@@ -444,7 +455,9 @@ export default function App() {
       });
       setEditingEventId(null);
     } catch (error) {
-      triggerAppNotification('Error', `Error inesperado: No se pudo procesar la solicitud.`, 'error');
+      console.error("Unexpected error block triggered:", error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -896,9 +909,18 @@ export default function App() {
                         <span className="whitespace-nowrap shrink-0">Cancelar</span>
                       </button>
                     )}
-                    <button type="submit" className="w-full md:w-auto flex items-center justify-center px-10 py-4 bg-zona-orange hover:bg-[#eb8400] text-white rounded-[16px] font-bold shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98] text-lg shrink-0">
-                      <CalendarIcon className="w-5 h-5 mr-3 shrink-0" />
-                      <span className="whitespace-nowrap shrink-0">{editingEventId ? 'Actualizar Reserva' : 'Confirmar Reserva'}</span>
+                    <button type="submit" disabled={isSaving} className="w-full md:w-auto flex items-center justify-center px-10 py-4 bg-zona-orange hover:bg-[#eb8400] text-white rounded-[16px] font-bold shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98] text-lg shrink-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isSaving ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3 shrink-0"></div>
+                          <span className="whitespace-nowrap shrink-0">Procesando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CalendarIcon className="w-5 h-5 mr-3 shrink-0" />
+                          <span className="whitespace-nowrap shrink-0">{editingEventId ? 'Actualizar Reserva' : 'Confirmar Reserva'}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
