@@ -1,6 +1,6 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyB0k0KsXZ0VVgLuEOUFkxCG1nALT7DuXtI",
@@ -18,7 +18,7 @@ let auth: Auth | undefined;
 
 try {
   app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  db = initializeFirestore(app, { experimentalForceLongPolling: true });
   
   if (db) {
     enableIndexedDbPersistence(db).catch((err) => {

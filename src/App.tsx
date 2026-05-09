@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { db, auth } from './firebase';
 import { 
-  collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, query, getDoc 
+  collection, doc, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, query, getDoc, getDocs, where 
 } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, onAuthStateChanged, signOut, User
@@ -365,9 +365,35 @@ export default function App() {
       return;
     }
 
-    if (checkConflicts(formData.date, formData.startTime, formData.endTime, formData.roomId, editingEventId)) {
-      triggerAppNotification('Conflicto detectado', 'La sala ya está ocupada en ese horario.', 'error');
-      return;
+    try {
+      // Remote Duplicate Prevention Query
+      const q = query(
+        collection(db, 'events'), 
+        where('date', '==', formData.date), 
+        where('roomId', '==', formData.roomId)
+      );
+      const snapshot = await getDocs(q);
+      const newStart = new Date(`1970-01-01T${formData.startTime}:00`).getTime();
+      const newEnd = new Date(`1970-01-01T${formData.endTime}:00`).getTime();
+      
+      const hasConflict = snapshot.docs.some(d => {
+        if (d.id === editingEventId) return false;
+        const eData = d.data();
+        const eStart = new Date(`1970-01-01T${eData.startTime}:00`).getTime();
+        const eEnd = new Date(`1970-01-01T${eData.endTime}:00`).getTime();
+        return (newStart < eEnd && newEnd > eStart);
+      });
+
+      if (hasConflict) {
+        triggerAppNotification('Conflicto detectado', 'El salón ya está ocupado en este horario', 'error');
+        return;
+      }
+    } catch (err) {
+      console.warn('Conflict check failed, falling back to local state:', err);
+      if (checkConflicts(formData.date, formData.startTime as string, formData.endTime as string, formData.roomId, editingEventId)) {
+        triggerAppNotification('Conflicto detectado', 'El salón ya está ocupado en este horario', 'error');
+        return;
+      }
     }
 
     const payload = {
@@ -389,20 +415,25 @@ export default function App() {
 
     try {
       if (editingEventId) {
-        // Optimistic update, run in background
-        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(error => {
-          console.error("Background sync error (update):", error);
+        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(err => {
+          console.error("Write error:", err);
+          triggerAppNotification('Error', 'No se pudo sincronizar el cambio. Verifique su conexión.', 'error');
         });
         triggerAppNotification('Evento Actualizado', `Modificado: ${payload.eventName}`, 'success');
       } else {
-        // Optimistic create, run in background
-        addDoc(collection(db, 'events'), payload).catch(error => {
-          console.error("Background sync error (create):", error);
+        addDoc(collection(db, 'events'), payload).catch(err => {
+          console.error("Write error:", err);
+          triggerAppNotification('Error', 'No se pudo sincronizar. Verifique su conexión.', 'error');
         });
         triggerAppNotification('Evento Confirmado', `Reservado: ${payload.eventName}`, 'success');
-        sendRealNotification('✅ Nuevo Evento Agendado', { body: `${payload.eventName} por ${payload.clientName} en ${ROOMS.find(r=>r.id===payload.roomId)?.name}.` });
+        
+        // Secondary actions running asynchronously without failing UI
+        Promise.allSettled([
+          sendRealNotification('✅ Nuevo Evento Agendado', { body: `${payload.eventName} por ${payload.clientName} en ${ROOMS.find(r=>r.id===payload.roomId)?.name}.` })
+        ]).catch(err => console.error("Secondary action failed:", err));
       }
       
+      // Optimistic closure immediately after the wait finishes or starts
       setActiveTab('agenda');
       setCurrentDate(new Date(`${formData.date}T12:00:00`));
 
@@ -611,9 +642,9 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 h-full overflow-y-auto pb-32 md:pb-8 relative scroll-smooth flex flex-col justify-start items-center">
+      <main className="flex-1 h-full overflow-y-auto pb-32 md:pb-8 pt-[calc(80px+env(safe-area-inset-top))] md:pt-0 relative scroll-smooth flex flex-col justify-start items-center">
         {/* Mobile Header */}
-        <header className="md:hidden w-full flex items-center justify-between p-4 bg-white/95 backdrop-blur-md shadow-sm z-10 sticky top-0 border-b border-gray-100">
+        <header className="md:hidden fixed top-0 left-0 right-0 w-full flex items-center justify-between px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] bg-white/90 backdrop-blur-xl shadow-sm z-[1000] border-b border-gray-100">
           <div className="flex items-center shrink-0">
              <img src={ICON_COLOR} alt="Zona" className="h-8 w-8 mr-2 object-contain" />
              <span className="font-bold tracking-tight text-lg text-zona-blue">Zona</span>
@@ -630,7 +661,7 @@ export default function App() {
 
         <AnimatePresence>
         {showNotification && (
-          <motion.div initial={{ opacity: 0, y: -20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: -20, x: "-50%" }} transition={{ duration: 0.3 }} className="fixed top-4 left-1/2 z-50 w-[90%] md:w-auto max-w-md">
+          <motion.div initial={{ opacity: 0, y: -20, x: "-50%" }} animate={{ opacity: 1, y: 0, x: "-50%" }} exit={{ opacity: 0, y: -20, x: "-50%" }} transition={{ duration: 0.3 }} className="fixed top-[calc(5rem+env(safe-area-inset-top))] md:top-4 left-1/2 z-[1100] w-[90%] md:w-auto max-w-md">
             <div className={`px-6 py-4 rounded-[20px] shadow-2xl flex items-center border backdrop-blur-xl ${
                 notificationMsg.type === 'error' ? 'bg-red-500/95 border-red-400 text-white' : 
                 notificationMsg.type === 'alert' ? 'bg-zona-orange/95 border-orange-400 text-white' : 
@@ -690,25 +721,24 @@ export default function App() {
                           const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => a.startTime.localeCompare(b.startTime));
                           const isToday = new Date().toISOString().split('T')[0] === dateStr;
                           const isSelected = selectedDateStr === dateStr;
-                          
                           return (
-                            <div key={day} onClick={() => setSelectedDateStr(dateStr)} className={`bg-white p-2 md:p-3 transition-colors hover:bg-blue-50/50 cursor-pointer overflow-hidden ${isSelected ? 'ring-[3px] ring-zona-orange ring-inset bg-orange-50/20 z-10 relative' : ''}`}>
-                               <div className={`font-bold text-xs md:text-sm mb-1.5 md:mb-2 w-6 h-6 md:w-7 md:h-7 mx-auto md:mx-0 flex items-center justify-center rounded-full ${isToday ? 'bg-zona-orange text-white shadow-md' : isSelected ? 'bg-zona-blue text-white' : 'text-gray-500'}`}>{day}</div>
-                               <div className="flex flex-wrap gap-1.5 mt-1 justify-center md:justify-start">
+                            <div key={day} onClick={() => setSelectedDateStr(dateStr)} className={`bg-white p-2 md:p-3 transition-colors hover:bg-blue-50/50 cursor-pointer overflow-hidden flex flex-col ${isSelected ? 'ring-[3px] ring-zona-orange ring-inset bg-orange-50/20 z-10 relative' : ''}`}>
+                               <div className={`font-bold text-xs md:text-sm mb-1.5 md:mb-2 w-6 h-6 md:w-7 md:h-7 mx-auto md:mx-0 flex items-center justify-center rounded-full shrink-0 ${isToday ? 'bg-zona-orange text-white shadow-md' : isSelected ? 'bg-zona-blue text-white' : 'text-gray-500'}`}>{day}</div>
+                               <div className="flex flex-wrap md:flex-col gap-2 md:gap-1 mt-1 pb-1 justify-center md:justify-start flex-1 overflow-hidden">
                                  {dayEvents.map(e => {
                                    const room = ROOMS.find(r => r.id === e.roomId);
                                    return (
-                                     <div key={e.id} onClick={(evt) => { evt.stopPropagation(); handleEventClick(e); }} className="relative group cursor-pointer">
-                                       <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full shadow-sm hover:scale-150 transition-transform" style={{ backgroundColor: e.createdBy_Color || e.userColor || '#9ca3af' }} />
-                                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max bg-gray-900/90 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-md shadow-xl z-50 pointer-events-none transition-all">
-                                          Creado por {e.createdBy_Name || e.creatorName || 'Usuario'}
+                                     <div key={e.id} onClick={(evt) => { evt.stopPropagation(); handleEventClick(e); }} className="relative group cursor-pointer lg:w-full min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center md:block justify-center">
+                                       <div className="md:hidden w-3 h-3 rounded-full shadow-sm hover:scale-150 transition-transform m-2" style={{ backgroundColor: e.createdBy_Color || e.userColor || '#9ca3af' }} />
+                                       <div className="hidden md:flex w-full px-1.5 py-1 text-[10.5px] font-bold rounded overflow-hidden whitespace-nowrap text-ellipsis text-white shadow-sm hover:opacity-90 transition-opacity min-h-[24px] items-center" style={{ backgroundColor: e.createdBy_Color || e.userColor || '#9ca3af' }} title={e.eventName}>
+                                          {e.eventName}
                                        </div>
                                      </div>
                                    );
                                  })}
                                </div>
                             </div>
-                          )
+                          );
                        })}
                      </div>
                    </>
@@ -1021,26 +1051,26 @@ export default function App() {
       </aside>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 pb-safe z-40 border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 pb-[env(safe-area-inset-bottom)] z-40 border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] backdrop-blur-xl">
         <div className="flex items-center justify-between px-6 pt-3 pb-4">
-            <button onClick={() => setActiveTab('agenda')} className={`flex flex-col items-center transition-colors ${activeTab === 'agenda' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
+            <button onClick={() => setActiveTab('agenda')} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] transition-colors ${activeTab === 'agenda' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
               <CalendarIcon className="w-6 h-6 mb-1 shrink-0" />
               <span className="text-[10px] font-bold tracking-wide">Agenda</span>
             </button>
-            <button onClick={handleNewTabClick} className={`flex flex-col items-center transition-colors ${activeTab === 'nuevo' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
+            <button onClick={handleNewTabClick} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] transition-colors ${activeTab === 'nuevo' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
               <Plus className="w-6 h-6 mb-1 shrink-0" />
               <span className="text-[10px] font-bold tracking-wide">Nuevo</span>
             </button>
             <div className="relative -top-8 shrink-0">
-               <button onClick={() => setActiveTab('ia')} className="relative bg-gradient-to-tr from-zona-orange to-[#ffaa33] w-[60px] h-[60px] flex items-center justify-center rounded-[20px] shadow-xl shadow-orange-500/20 text-white outline-none transform active:scale-95 transition-all border-4 border-white z-10 hover:border-gray-50">
+               <button onClick={() => setActiveTab('ia')} className="relative bg-gradient-to-tr from-zona-orange to-[#ffaa33] w-[60px] h-[60px] flex items-center justify-center rounded-[20px] shadow-xl shadow-orange-500/20 text-white outline-none transform active:scale-95 transition-all border-4 border-white z-10 hover:border-gray-50 min-w-[44px] min-h-[44px]">
                  <img src={ICON_WHITE} alt="IA" className="w-[26px] h-[26px] object-contain shrink-0" />
                </button>
             </div>
-            <button onClick={() => setActiveTab('metricas')} className={`flex flex-col items-center transition-colors ${activeTab === 'metricas' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
+            <button onClick={() => setActiveTab('metricas')} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] transition-colors ${activeTab === 'metricas' ? 'text-zona-orange' : 'text-gray-400 hover:text-zona-blue'}`}>
               <PieChart className="w-6 h-6 mb-1 shrink-0" />
               <span className="text-[10px] font-bold tracking-wide">Métricas</span>
             </button>
-            <button onClick={requestNotifications} className={`flex flex-col items-center transition-colors ${notificationsEnabled ? 'text-green-500' : 'text-gray-400'}`}>
+            <button onClick={requestNotifications} className={`flex flex-col items-center justify-center min-w-[44px] min-h-[44px] transition-colors ${notificationsEnabled ? 'text-green-500' : 'text-gray-400'}`}>
                {notificationsEnabled ? <BellRing className="w-6 h-6 mb-1 shrink-0" /> : <Bell className="w-6 h-6 mb-1 shrink-0" />}
                <span className="text-[10px] font-bold tracking-wide">Alertas</span>
             </button>
@@ -1133,7 +1163,7 @@ export default function App() {
               <span className="text-sm font-semibold text-gray-600">Organizado por <span className="text-gray-900 font-bold">{eventToView.createdBy_Name || eventToView.creatorName || 'Usuario'}</span></span>
             </div>
 
-            <div className="mt-auto grid grid-cols-2 gap-3 pb-safe pt-2">
+            <div className="mt-auto grid grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom)] pt-2">
               <button onClick={() => setEventToView(null)} className="w-full py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-[16px] font-bold transition-all text-sm tracking-wide active:scale-95">Cerrar</button>
               <button onClick={() => handleEditFromView(eventToView)} className="w-full py-3.5 bg-zona-blue hover:bg-[#111e4f] text-white rounded-[16px] font-bold transition-all text-sm tracking-wide shadow-md shadow-blue-900/20 active:scale-95">Editar</button>
               
