@@ -420,12 +420,22 @@ export default function App() {
       createdAt: Date.now()
     };
 
+    const handleAsyncSaveError = (err: any) => {
+      console.error("Write error:", err);
+      const errMsg = err?.message?.toLowerCase() || '';
+      if (errMsg.includes('permission') || errMsg.includes('quota') || errMsg.includes('missing or insufficient') || errMsg.includes('denied')) {
+        triggerAppNotification('Error', 'Problema de permisos o cuota al guardar.', 'error');
+      } else {
+        console.warn("Ignoring network/timeout error for optimistic save.");
+      }
+    };
+
     try {
       if (editingEventId) {
-        await updateDoc(doc(db, 'events', editingEventId), payload as any);
+        updateDoc(doc(db, 'events', editingEventId), payload as any).catch(handleAsyncSaveError);
         triggerAppNotification('Reserva Exitosa', `Modificado: ${payload.eventName}`, 'success');
       } else {
-        await addDoc(collection(db, 'events'), payload);
+        addDoc(collection(db, 'events'), payload).catch(handleAsyncSaveError);
         triggerAppNotification('Reserva Exitosa', `Reservado: ${payload.eventName}`, 'success');
         
         // Secondary actions running asynchronously without failing UI
@@ -434,6 +444,7 @@ export default function App() {
         ]).catch(err => console.error("Secondary action failed:", err));
       }
       
+      // Optimistic closure immediately after the wait finishes or starts
       setActiveTab('agenda');
       setCurrentDate(new Date(`${formData.date}T12:00:00`));
 
@@ -443,30 +454,8 @@ export default function App() {
         roomLayout: 'Mesa en U', resources: { sillas: false, mesas: false, cubiertos: false, agua: false, cafe: false, servilletas: false }
       });
       setEditingEventId(null);
-    } catch (error: any) {
-      console.error("DEBUG_INFO:", error?.code, error?.message || error);
-      
-      const errorCode = error?.code || '';
-      if (errorCode === 'already-exists' || errorCode === 'document-already-exists') {
-        setActiveTab('agenda');
-        setEditingEventId(null);
-        triggerAppNotification('Reserva Exitosa', `La reserva ya fue procesada.`, 'success');
-      } else {
-        const eventExistsInLocalCache = events.some(e => 
-          e.date === formData.date && 
-          e.roomId === formData.roomId && 
-          e.startTime === formData.startTime && 
-          e.createdBy === user.uid
-        );
-
-        if (eventExistsInLocalCache) {
-          triggerAppNotification('Reserva Exitosa', 'Guardado y sincronizado localmente.', 'success');
-          setActiveTab('agenda');
-          setEditingEventId(null);
-        } else {
-          triggerAppNotification('Error', 'Error inesperado: No se pudo procesar la solicitud.', 'error');
-        }
-      }
+    } catch (error) {
+      console.error("Unexpected error block triggered:", error);
     } finally {
       setIsSaving(false);
     }
