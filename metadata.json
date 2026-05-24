@@ -2,5 +2,5 @@
   "name": "Zona Coworking Dashboard",
   "description": "Immersive Dashboard for Zona Coworking logistical and event management.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

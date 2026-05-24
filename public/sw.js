@@ -2,7 +2,7 @@ const CACHE_NAME = 'zona-coworking-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/favicon.svg'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', event => {
@@ -32,7 +32,7 @@ self.addEventListener('push', event => {
     const title = payload.title || 'Notification';
     const options = {
       body: payload.body || 'New message',
-      icon: '/favicon.svg',
+      icon: 'https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png',
       vibrate: [200, 100, 200]
     };
     event.waitUntil(

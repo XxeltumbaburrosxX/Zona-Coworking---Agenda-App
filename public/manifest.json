@@ -1,0 +1,23 @@
+{
+  "name": "Zona Coworking Dashboard",
+  "short_name": "Zona Coworking",
+  "description": "Dashboard para la gestión y reserva de espacios en Zona Coworking",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#182865",
+  "theme_color": "#182865",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

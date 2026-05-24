@@ -1002,71 +1002,74 @@ export default function App() {
       </main>
 
       {/* Desktop Right Sidebar */}
-      <aside className="hidden xl:flex w-[320px] shrink-0 bg-white border-l border-gray-100 flex-col h-full shadow-[-4px_0_24px_rgba(0,0,0,0.02)] relative z-10">
-        <div className="p-6 border-b border-gray-50 flex items-center justify-between min-w-0">
-          <h3 className="font-bold text-sm text-gray-400 tracking-widest uppercase truncate min-w-0">Insights</h3>
-          <button onClick={requestNotifications} className={`flex items-center px-4 py-2 rounded-full border text-xs font-bold transition-colors shrink-0 ${notificationsEnabled ? 'border-green-200 bg-green-50 text-green-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
-            {notificationsEnabled ? <BellRing className="w-3.5 h-3.5 mr-1.5 shrink-0" /> : <Bell className="w-3.5 h-3.5 mr-1.5 shrink-0" />}
-            {notificationsEnabled ? 'Activas' : 'Notificaciones'}
+      <aside className="hidden xl:flex w-[340px] shrink-0 bg-[#f9fafb] border-l border-gray-200 flex-col h-full relative z-10">
+        <div className="px-8 py-6 border-b border-gray-200/60 flex items-center justify-between bg-white/50 backdrop-blur-sm sticky top-0 z-20">
+          <h3 className="font-bold text-xs text-gray-900 tracking-[0.2em] uppercase truncate min-w-0">Insights</h3>
+          <button onClick={requestNotifications} className={`w-9 h-9 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95 ${notificationsEnabled ? 'bg-green-100 text-green-700 shadow-sm' : 'bg-white border border-gray-200 text-gray-500 shadow-sm'}`} title={notificationsEnabled ? 'Notificaciones Activas' : 'Activar Notificaciones'}>
+            {notificationsEnabled ? <BellRing className="w-4 h-4 shrink-0" /> : <Bell className="w-4 h-4 shrink-0" />}
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-8">
-          <div className="bg-gradient-to-br from-zona-blue to-[#1c2e7a] rounded-[24px] p-6 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden group border border-white/5">
-             <div className="absolute -top-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-700"></div>
-             <h4 className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-4 flex items-center"><Clock className="w-3 h-3 mr-1.5 shrink-0"/> Próximo Evento</h4>
+        <div className="flex-1 overflow-y-auto p-8 space-y-10">
+          
+          <div className="bg-[#182865] rounded-[24px] p-7 text-white shadow-xl shadow-[#182865]/10 relative overflow-hidden group">
+             {/* Decorative Background */}
+             <div className="absolute -top-12 -right-12 w-48 h-48 bg-zona-orange/20 rounded-full blur-3xl opacity-50 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none"></div>
+             
+             <h4 className="text-[10px] font-bold text-blue-200/70 uppercase tracking-widest mb-6 flex items-center"><Clock className="w-3.5 h-3.5 mr-2 shrink-0"/> Próximo Evento</h4>
+             
              {nextEvent ? (
                <AnimatePresence mode="wait">
-                 <motion.div key={nextEvent.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="relative z-10 min-w-0">
-                   <p className="text-3xl font-bold tracking-tight mb-1 truncate">{nextEvent.startTime}</p>
-                   <div className="flex items-center gap-2 mb-4">
-                      {(nextEvent.createdBy_Color || nextEvent.userColor) && (
-                         <div className="relative group cursor-pointer inline-flex">
-                           <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: nextEvent.createdBy_Color || nextEvent.userColor }}></div>
-                           <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-max bg-gray-900/90 backdrop-blur-sm text-white text-[11px] font-medium px-2.5 py-1 rounded-md shadow-xl z-50 pointer-events-none">
-                             Creado por {nextEvent.createdBy_Name || nextEvent.creatorName || 'Usuario'}
-                           </div>
-                         </div>
-                      )}
-                      <p className="text-sm font-semibold text-white/90 truncate" title={nextEvent.eventName}>{nextEvent.eventName}</p>
+                 <motion.div key={nextEvent.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="relative z-10 min-w-0">
+                   <div className="mb-6">
+                     <p className="text-4xl font-bold tracking-tighter mb-2 truncate text-white">{nextEvent.startTime}</p>
+                     <div className="flex items-center gap-2">
+                        {(nextEvent.createdBy_Color || nextEvent.userColor) && (
+                           <div className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: nextEvent.createdBy_Color || nextEvent.userColor }}></div>
+                        )}
+                        <p className="text-sm font-medium text-blue-100 truncate" title={nextEvent.eventName}>{nextEvent.eventName}</p>
+                     </div>
                    </div>
-                   <div className="bg-black/20 backdrop-blur-sm rounded-[16px] p-4 border border-white/10 min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-1">Sala Reservada</p>
-                      <p className="text-xs font-bold flex items-center text-white"><MapPin className="w-3.5 h-3.5 mr-1.5 text-zona-orange shrink-0"/> <span className="truncate">{ROOMS.find(r=>r.id===nextEvent.roomId)?.name}</span></p>
+                   
+                   <div className="bg-white/10 backdrop-blur-md rounded-[16px] p-4 border border-white/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-blue-200/70 mb-1.5">Sala Reservada</p>
+                      <p className="text-sm font-bold flex items-center text-white"><MapPin className="w-4 h-4 mr-1.5 text-zona-orange shrink-0"/> <span className="truncate">{ROOMS.find(r=>r.id===nextEvent.roomId)?.name}</span></p>
                    </div>
                  </motion.div>
                </AnimatePresence>
              ) : (
-                <div className="py-8 text-center min-w-0">
-                  <div className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center mx-auto mb-3"><CalendarIcon className="w-5 h-5 text-white/30 shrink-0"/></div>
-                  <p className="text-sm text-white/50 font-medium truncate">Agenda libre</p>
+                <div className="py-10 text-center min-w-0 relative z-10">
+                  <div className="w-14 h-14 rounded-full border border-white/10 bg-white/5 flex items-center justify-center mx-auto mb-4"><CalendarIcon className="w-6 h-6 text-white/40 shrink-0"/></div>
+                  <p className="text-sm text-blue-200/70 font-medium">Agenda libre</p>
                 </div>
              )}
           </div>
+
           <div>
-             <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center min-w-0"><AlertCircle className="w-3.5 h-3.5 mr-1.5 shrink-0"/> Pruebas del Sistema</h4>
-             <div className="space-y-4">
-               <div className="bg-white p-4 rounded-[16px] border border-gray-100 shadow-sm cursor-pointer hover:-translate-y-0.5 transition-transform" onClick={simulatePrepAlert}>
-                 <div className="flex gap-3 min-w-0">
-                   <div className="w-8 h-8 rounded-full bg-zona-orange/10 border border-zona-orange/20 flex items-center justify-center shrink-0">
-                      <Clock className="w-4 h-4 text-zona-orange shrink-0" />
+             <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-5 flex items-center"><AlertCircle className="w-3.5 h-3.5 mr-2 shrink-0"/> Pruebas del Sistema</h4>
+             <div className="flex flex-col gap-3">
+               <button onClick={simulatePrepAlert} className="w-full text-left bg-white p-4 rounded-[20px] border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all group active:scale-[0.98]">
+                 <div className="flex gap-4 items-center">
+                   <div className="w-10 h-10 rounded-full bg-zona-orange/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Clock className="w-5 h-5 text-zona-orange" />
                    </div>
                    <div className="min-w-0">
-                     <p className="text-xs font-bold text-gray-900 leading-tight truncate">Test: Alerta Logística</p>
-                     <p className="text-[11px] text-gray-500 mt-1 font-medium leading-relaxed">Dispara alert push: -45min.</p>
+                     <p className="text-sm font-bold text-gray-900 truncate">Alerta Logística</p>
+                     <p className="text-xs text-gray-500 mt-0.5 truncate">Dispara alert push: -45min.</p>
                    </div>
                  </div>
-               </div>
-               <div className="bg-white p-4 rounded-[16px] border border-gray-100 shadow-sm cursor-pointer hover:-translate-y-0.5 transition-transform" onClick={() => sendRealNotification('🧹 Sala Lista', { body: 'Río Morichal está lista y limpia.' })}>
-                 <div className="flex gap-3 min-w-0">
-                   <div className="w-8 h-8 rounded-full bg-green-50 border border-green-100 flex items-center justify-center shrink-0">
-                      <Check className="w-4 h-4 text-green-500 shrink-0" />
+               </button>
+               
+               <button onClick={() => sendRealNotification('🧹 Sala Lista', { body: 'Río Morichal está lista y limpia.' })} className="w-full text-left bg-white p-4 rounded-[20px] border border-gray-200/60 shadow-sm hover:shadow-md hover:border-gray-300 transition-all group active:scale-[0.98]">
+                 <div className="flex gap-4 items-center">
+                   <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <Check className="w-5 h-5 text-green-500" />
                    </div>
                    <div className="min-w-0">
-                     <p className="text-xs font-bold text-gray-900 leading-tight truncate">Test: Limpieza lista</p>
-                     <p className="text-[11px] text-gray-500 mt-1 font-medium leading-relaxed">Notificación simple.</p>
+                     <p className="text-sm font-bold text-gray-900 truncate">Limpieza lista</p>
+                     <p className="text-xs text-gray-500 mt-0.5 truncate">Notificación simple.</p>
                    </div>
                  </div>
-               </div>
+               </button>
              </div>
           </div>
         </div>
