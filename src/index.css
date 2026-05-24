@@ -1,15 +1,53 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-zona-blue: #182865;
-  --color-zona-orange: #FF9305;
-  --color-zona-white: #FFFFFF;
+  --color-brand-blue: #182865;
+  --color-brand-orange: #FF9305;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  background-color: var(--color-zona-white);
-  color: var(--color-zona-blue);
-  font-family: 'Montserrat', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  :root {
+    --bg-color: #fcfcfd;
+  }
+  
+  html, body, #root {
+    @apply h-full w-full m-0 p-0 overflow-hidden bg-[var(--bg-color)] text-slate-800;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-sm;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .minimal-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .minimal-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .minimal-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
+  }
+  .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
 }
