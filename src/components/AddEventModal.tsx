@@ -35,6 +35,7 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
   const [startTime, setStartTime] = useState(editingEvent?.startTime ?? '');
   const [endTime, setEndTime] = useState(editingEvent?.endTime ?? '');
   const [roomLayout, setRoomLayout] = useState<RoomLayout | ''>(editingEvent?.roomLayout ?? '');
+  const [customRoomLayout, setCustomRoomLayout] = useState('');
   const [notes, setNotes] = useState(editingEvent?.notes ?? '');
   const [resources, setResources] = useState({
     water: editingEvent?.resources?.water ?? false,
@@ -123,6 +124,11 @@ END:VCALENDAR`;
       alert("Por favor especifica el tipo de evento.");
       return;
     }
+
+    if (roomLayout === 'Otro' && !customRoomLayout.trim()) {
+      alert("Por favor especifica la distribución del espacio.");
+      return;
+    }
     
     if (Number(attendees) < 1) {
       alert("El número de asistentes debe ser al menos 1.");
@@ -148,7 +154,7 @@ END:VCALENDAR`;
         date,
         startTime,
         endTime,
-        roomLayout: roomLayout as RoomLayout,
+        roomLayout: (roomLayout === 'Otro' && customRoomLayout ? customRoomLayout : roomLayout) as RoomLayout,
         resources,
         notes,
         createdBy: auth.currentUser.uid,
@@ -313,7 +319,7 @@ END:VCALENDAR`;
                 </div>
               </div>
               <div className="space-y-1.5 relative">
-                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Users size={16}/> Asistentes</label>
+                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Users size={16}/> Cantidad de Personas</label>
                 <input required type="number" min="1" value={attendees} onChange={e => setAttendees(e.target.value === '' ? '' : parseInt(e.target.value))} 
                   className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
               </div>
@@ -332,15 +338,21 @@ END:VCALENDAR`;
               {showSetup && (
                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3 relative">
+                    <div className="space-y-3 relative flex flex-col">
                       <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Layout size={16}/> Distribución del Espacio</label>
                       <select value={roomLayout} onChange={e => setRoomLayout(e.target.value as RoomLayout)}
                         className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
                         <option value="" disabled>Ninguna (Por Defecto)...</option>
-                        {['Tipo U', 'Teatro', 'Mesa de Conferencias', 'Con Mesas', 'Con Mesas y Sillas', 'Solo Sillas'].map(l => (
+                        {['Tipo Teatro', 'Mesa de Conferencia', 'Mesa con Sillas', 'Solo Sillas', 'Otro'].map(l => (
                           <option key={l} value={l}>{l}</option>
                         ))}
                       </select>
+                      
+                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${roomLayout === 'Otro' ? 'max-h-24 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                         <input type="text" value={customRoomLayout} onChange={e => setCustomRoomLayout(e.target.value)}
+                          className="w-full px-4 py-3 h-12 min-h-[48px] bg-white border border-brand-orange/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition-all placeholder:text-slate-400" 
+                          placeholder="¿Qué tipo de distribución de espacio sería?" />
+                      </div>
                     </div>
 
                     <div className="space-y-3 relative">

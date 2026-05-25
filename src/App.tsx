@@ -243,9 +243,16 @@ export default function App() {
                 </>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <AnimatePresence mode="wait">
                 {activeMenu === 'agenda' ? (
-                  <>
+                  <motion.div 
+                    key="agenda"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+                  >
                     {/* Left Side: Calendar Component */}
                     <div className="lg:col-span-5 relative">
                       
@@ -357,13 +364,20 @@ export default function App() {
                         )}
                       </AnimatePresence>
                     </div>
-                  </>
+                  </motion.div>
                 ) : (
-                  <div className="lg:col-span-12">
+                  <motion.div 
+                    key="metrics"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="w-full"
+                  >
                     <MetricsDashboard events={events} />
-                  </div>
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             </div>
 
         </div>
