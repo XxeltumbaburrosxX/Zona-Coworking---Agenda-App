@@ -34,6 +34,16 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [selectedRoomFilter, setSelectedRoomFilter] = useState<string>('Todos');
+
+  const filterRoomsMap = [
+    { label: 'Todos', ids: [] },
+    { label: 'Río Morichal', ids: ['1'] },
+    { label: 'Cocina de Ríos', ids: ['2'] },
+    { label: 'Río Amana', ids: ['3'] },
+    { label: 'Río Guarapiche 1 y 2', ids: ['4', '5'] },
+    { label: 'Río San Juan', ids: ['6'] },
+  ];
 
   useEffect(() => {
     if (!auth) {
@@ -97,8 +107,15 @@ export default function App() {
     return <ColorSelectionScreen onComplete={() => setIsColorSelectionRequired(false)} />;
   }
 
+  const activeFilterInfo = filterRoomsMap.find(f => f.label === selectedRoomFilter);
+  
+  const filteredEvents = events.filter(e => {
+    if (selectedRoomFilter === 'Todos') return true;
+    return activeFilterInfo?.ids.includes(e.roomId);
+  });
+
   // Derived state for selected day
-  const dayEvents = events
+  const dayEvents = filteredEvents
     .filter(e => e.date === selectedDateStr)
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
@@ -230,9 +247,29 @@ export default function App() {
                 {activeMenu === 'agenda' ? (
                   <>
                     {/* Left Side: Calendar Component */}
-                    <div className="lg:col-span-5">
+                    <div className="lg:col-span-5 relative">
+                      
+                      {/* FILTRO POR ESPACIO (PILLS) */}
+                      <div className="mb-4 w-full overflow-x-auto hide-scrollbar touch-pan-x">
+                        <div className="flex items-center gap-2 pb-2 min-w-max">
+                          {filterRoomsMap.map((filter) => (
+                            <button
+                              key={filter.label}
+                              onClick={() => setSelectedRoomFilter(filter.label)}
+                              className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                                selectedRoomFilter === filter.label 
+                                  ? 'bg-brand-blue text-white shadow-md shadow-blue-900/10' 
+                                  : 'bg-white text-slate-500 border border-slate-200 hover:border-brand-blue/30 hover:bg-slate-50'
+                              }`}
+                            >
+                              {filter.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <CalendarGrid 
-                        events={events} 
+                        events={filteredEvents} 
                         usersConfig={usersConfig}
                         selectedDateStr={selectedDateStr} 
                         onSelectDate={setSelectedDateStr}
