@@ -1,6 +1,6 @@
 {
   "name": "Zona Coworking Dashboard",
-  "short_name": "Zona",
+  "short_name": "Dashboard",
   "description": "Herramienta de gestión para Zona Coworking",
   "start_url": "/",
   "display": "standalone",
