@@ -10,14 +10,14 @@ export function NextEventCounter({ events }: Props) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000); // update every minute
+    // Update every minute (or even every second if you want seconds later)
+    const timer = setInterval(() => setNow(new Date()), 60000); 
     return () => clearInterval(timer);
   }, []);
 
   const nextEvent = useMemo(() => {
     const upcomingEvents = events
       .map(event => {
-        // Create a proper date object for the event's start time
         const [year, month, day] = event.date.split('-').map(Number);
         const [hours, minutes] = event.startTime.split(':').map(Number);
         const eventDate = new Date(year, month - 1, day, hours, minutes);
@@ -37,9 +37,7 @@ export function NextEventCounter({ events }: Props) {
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / 1000 / 60) % 60);
 
-    if (days > 0) return `En ${days} día${days > 1 ? 's' : ''}, ${hours} hora${hours !== 1 ? 's' : ''}`;
-    if (hours > 0) return `En ${hours} hora${hours !== 1 ? 's' : ''}, ${minutes} min`;
-    return `En ${minutes} min`;
+    return { days, hours, minutes };
   }, [nextEvent, now]);
 
   if (!nextEvent) {
@@ -72,9 +70,26 @@ export function NextEventCounter({ events }: Props) {
         </div>
       </div>
 
-      <div className="relative z-10 sm:text-right bg-brand-blue text-white px-4 py-2.5 rounded-xl shadow-sm self-start sm:self-auto border border-brand-blue/20 flex flex-col items-start sm:items-end w-max">
-        <span className="text-[10px] font-medium text-brand-blue-100 uppercase tracking-widest mb-0.5">Comienza en</span>
-        <span className="text-sm font-bold">{timeRemaining}</span>
+      <div className="relative z-10 bg-brand-blue px-5 py-3 rounded-xl shadow-sm self-start sm:self-auto border border-brand-blue/20 flex flex-col items-center sm:items-end w-max">
+        <span className="text-[10px] font-bold text-brand-orange uppercase tracking-widest mb-1.5 opacity-90">Inicia en</span>
+        {timeRemaining && (
+          <div className="flex items-center gap-3 text-white font-display">
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-bold leading-none">{timeRemaining.days.toString().padStart(2, '0')}</span>
+              <span className="text-[10px] text-white/60 font-medium mt-1">DÍAS</span>
+            </div>
+            <span className="text-white/40 pb-3 font-mono">:</span>
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-bold leading-none">{timeRemaining.hours.toString().padStart(2, '0')}</span>
+              <span className="text-[10px] text-white/60 font-medium mt-1">HRS</span>
+            </div>
+            <span className="text-white/40 pb-3 font-mono">:</span>
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-bold leading-none">{timeRemaining.minutes.toString().padStart(2, '0')}</span>
+              <span className="text-[10px] text-white/60 font-medium mt-1">MIN</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
