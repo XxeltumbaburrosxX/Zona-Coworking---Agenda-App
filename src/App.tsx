@@ -15,6 +15,7 @@ import { CalendarGrid } from './components/CalendarGrid';
 import { AddEventModal } from './components/AddEventModal';
 import { MetricsDashboard } from './components/MetricsDashboard';
 import { NextEventCounter } from './components/NextEventCounter';
+import { InstallPWABanner } from './components/InstallPWABanner';
 
 // A beautifully minimal layout
 export default function App() {
@@ -412,6 +413,7 @@ export default function App() {
         </button>
       </div>
 
+      <InstallPWABanner />
     </div>
   );
 }
