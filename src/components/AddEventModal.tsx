@@ -18,6 +18,15 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
   const [deleting, setDeleting] = useState(false);
   const [showSetup, setShowSetup] = useState(window.innerWidth >= 768);
   const [isClosing, setIsClosing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    // Small delay to ensure the DOM is painted and CSS transition is triggered
+    const frame = requestAnimationFrame(() => {
+      setIsOpen(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -227,8 +236,11 @@ END:VCALENDAR`;
 
   return (
     <>
-      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
-      <div className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh] transition-transform duration-300 ${isClosing ? 'translate-y-full sm:translate-y-8 sm:scale-95' : 'translate-y-0 sm:scale-100'}`}>
+      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ease-out ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0'}`}>
+      <div 
+        className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh] transition-transform duration-300 ease-out`}
+        style={{ transform: (isOpen && !isClosing) ? 'translateY(0)' : 'translateY(100%)' }}
+      >
         <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-display font-bold text-brand-blue">
             {editingEvent ? 'Editar Reserva' : 'Nueva Reserva'}
