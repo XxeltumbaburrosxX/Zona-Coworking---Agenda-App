@@ -1,7 +1,7 @@
 export type EventType = 'Reunión' | 'Curso' | 'Masterclass' | 'Taller' | 'Sesión Fotográfica' | 'Grabación de Contenido' | 'Evento Corporativo' | 'Otros';
 export const EVENT_TYPES: EventType[] = ['Reunión', 'Curso', 'Masterclass', 'Taller', 'Sesión Fotográfica', 'Grabación de Contenido', 'Evento Corporativo', 'Otros'];
 
-export type RoomLayout = 'Tipo U' | 'Teatro' | 'Mesa de Conferencias' | 'Con Mesas' | 'Con Mesas y Sillas' | 'Solo Sillas';
+export type RoomLayout = 'School' | 'Theater' | 'U-Shape' | 'Boardroom' | 'Otro';
 
 export interface EventResource {
   water: boolean; coffee: boolean; napkins: boolean; tv: boolean;

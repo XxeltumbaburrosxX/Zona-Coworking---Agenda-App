@@ -355,7 +355,7 @@ END:VCALENDAR`;
                       <select value={roomLayout} onChange={e => setRoomLayout(e.target.value as RoomLayout)}
                         className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
                         <option value="" disabled>Ninguna (Por Defecto)...</option>
-                        {['Tipo Teatro', 'Mesa de Conferencia', 'Mesa con Sillas', 'Solo Sillas', 'Otro'].map(l => (
+                        {['School', 'Theater', 'U-Shape', 'Boardroom', 'Otro'].map(l => (
                           <option key={l} value={l}>{l}</option>
                         ))}
                       </select>
@@ -370,26 +370,11 @@ END:VCALENDAR`;
                     <div className="space-y-3 relative">
                       <label className="text-sm font-semibold text-slate-600">Recursos y Servicios</label>
                       
-                      <div className="grid grid-cols-4 gap-2 mt-2">
-                        <label className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-1 sm:p-2 rounded-xl bg-slate-50 border border-slate-200 h-10 min-h-[44px] hover:border-brand-orange/30 transition-colors">
-                          <input type="checkbox" checked={resources.water} onChange={e => setResources({...resources, water: e.target.checked})} 
-                            className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
-                          <span>Agua</span>
-                        </label>
-                        <label className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-1 sm:p-2 rounded-xl bg-slate-50 border border-slate-200 h-10 min-h-[44px] hover:border-brand-orange/30 transition-colors">
-                          <input type="checkbox" checked={resources.coffee} onChange={e => setResources({...resources, coffee: e.target.checked})} 
-                            className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
-                          <span>Café</span>
-                        </label>
-                        <label className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-1 sm:p-2 rounded-xl bg-slate-50 border border-slate-200 h-10 min-h-[44px] hover:border-brand-orange/30 transition-colors">
-                          <input type="checkbox" checked={resources.napkins} onChange={e => setResources({...resources, napkins: e.target.checked})} 
-                            className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
-                          <span>Servilletas</span>
-                        </label>
+                      <div className="grid grid-cols-1 gap-2 mt-2">
                         <label className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-1 sm:p-2 rounded-xl bg-slate-50 border border-slate-200 h-10 min-h-[44px] hover:border-brand-orange/30 transition-colors">
                           <input type="checkbox" checked={resources.tv} onChange={e => setResources({...resources, tv: e.target.checked})} 
                             className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
-                          <span>TV</span>
+                          <span>Pantalla TV</span>
                         </label>
                       </div>
                     </div>

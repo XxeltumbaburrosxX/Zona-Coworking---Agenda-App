@@ -164,7 +164,7 @@ export default function App() {
       />}
       
       {/* 1. Left Sidebar Navigation - Minimal & Elegant */}
-      <aside className="w-72 bg-white border-r border-slate-100 flex flex-col justify-between hidden md:flex shrink-0">
+      <aside className="w-[250px] bg-white border-r border-slate-100 flex flex-col justify-between hidden md:flex shrink-0">
         <div className="p-8 pb-4">
           <img src={LOGO_COLOR} alt="Zona Coworking" className="h-8 w-auto mb-12" />
           
@@ -240,7 +240,7 @@ export default function App() {
                       <Plus size={16} /> Nueva Reserva
                     </button>
                   </header>
-                  <NextEventCounter events={events} />
+                  <NextEventCounter events={events} isLoading={isEventsLoading} />
                 </>
               )}
 
@@ -298,7 +298,13 @@ export default function App() {
                       </div>
 
                       <AnimatePresence mode="popLayout">
-                        {dayEvents.length === 0 ? (
+                        {isEventsLoading ? (
+                          <motion.div key="skeleton-events" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                            <div className="h-28 bg-slate-200 animate-pulse rounded-2xl w-full"></div>
+                            <div className="h-28 bg-slate-200 animate-pulse rounded-2xl w-full"></div>
+                            <div className="h-28 bg-slate-200 animate-pulse rounded-2xl w-full"></div>
+                          </motion.div>
+                        ) : dayEvents.length === 0 ? (
                           <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-slate-200 rounded-2xl bg-white/50"
@@ -306,9 +312,9 @@ export default function App() {
                             <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-300 border border-slate-100 mb-4">
                               <CalendarIcon size={24} />
                             </div>
-                            <p className="text-slate-500 font-medium text-sm">No hay reservas programadas</p>
-                            <button onClick={() => setIsModalOpen(true)} className="mt-2 text-brand-orange text-sm font-semibold hover:underline">
-                              Agendar un espacio
+                            <p className="text-slate-500 font-medium text-sm">No hay eventos agendados para este día. ¡Agrega el primero!</p>
+                            <button onClick={() => setIsModalOpen(true)} className="mt-4 text-brand-orange text-sm font-bold bg-brand-orange/10 px-4 py-2 rounded-xl hover:bg-brand-orange hover:text-white transition-colors">
+                              Agendar un evento
                             </button>
                           </motion.div>
                         ) : (

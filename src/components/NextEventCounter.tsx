@@ -4,9 +4,10 @@ import { CalendarClock } from 'lucide-react';
 
 interface Props {
   events: EventData[];
+  isLoading?: boolean;
 }
 
-export function NextEventCounter({ events }: Props) {
+export function NextEventCounter({ events, isLoading }: Props) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -39,6 +40,12 @@ export function NextEventCounter({ events }: Props) {
 
     return { days, hours, minutes };
   }, [nextEvent, now]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-24 bg-slate-200 animate-pulse rounded-2xl mb-8"></div>
+    );
+  }
 
   if (!nextEvent) {
     return (
