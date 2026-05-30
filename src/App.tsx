@@ -126,8 +126,10 @@ export default function App() {
 
 
   return (
-    <div className="flex h-screen bg-[var(--bg-color)] text-slate-800 font-sans">
-      
+    <div className="flex flex-col h-screen bg-[var(--bg-color)] text-slate-800 font-sans">
+      <InstallPWABanner />
+      <div className="flex flex-1 overflow-hidden">
+        
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
@@ -390,7 +392,8 @@ export default function App() {
         </div>
 
       </main>
-      
+      </div>
+
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-2 flex justify-between items-center z-40 pb-[calc(8px+env(safe-area-inset-bottom))]">
         <button 
@@ -419,7 +422,6 @@ export default function App() {
         </button>
       </div>
 
-      <InstallPWABanner />
     </div>
   );
 }
