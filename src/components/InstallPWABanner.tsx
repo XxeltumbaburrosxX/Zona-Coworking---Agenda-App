@@ -44,20 +44,19 @@ export function InstallPWABanner() {
     };
   }, []);
 
-  const handleInstallClick = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
-          setShowInstallBanner(false);
-          localStorage.setItem('pwa_banner_dismissed', 'true');
-        }
-        deferredPrompt = null;
-      });
-    } else {
-      alert("La instalación nativa no está disponible en este navegador o la app ya está instalada.");
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    
+    deferredPrompt.prompt();
+    const choiceResult = await deferredPrompt.userChoice;
+    
+    if (choiceResult.outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+      localStorage.setItem('pwa_banner_dismissed', 'true');
     }
+    
+    setShowInstallBanner(false);
+    deferredPrompt = null;
   };
 
   const handleDismiss = () => {
