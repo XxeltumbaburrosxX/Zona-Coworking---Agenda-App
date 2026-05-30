@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Download, Info } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function InstallPWABanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const deferredPromptRef = useRef<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isFallback, setIsFallback] = useState(false);
 
   useEffect(() => {
     const hasServiceWorker = 'serviceWorker' in navigator;
@@ -38,7 +37,6 @@ export function InstallPWABanner() {
       setDeferredPrompt(e);
       deferredPromptRef.current = e;
       setShowInstallBanner(true);
-      setIsFallback(false);
       clearTimeout(fallbackTimer);
     };
 
@@ -48,8 +46,7 @@ export function InstallPWABanner() {
     
     fallbackTimer = setTimeout(() => {
       if (!deferredPromptRef.current) {
-        console.log('[PWA Debug] beforeinstallprompt not fired in 2.5s. Falling back to manual install banner.');
-        setIsFallback(true);
+        console.log('[PWA Debug] beforeinstallprompt not fired in 2.5s. Showing banner anyway.');
         setShowInstallBanner(true);
       }
     }, 2500);
@@ -76,30 +73,7 @@ export function InstallPWABanner() {
       deferredPromptRef.current = null;
     } else {
       console.log('[PWA Debug] Fallback used (reason: native install prompt unavailable)');
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
-      
-      if (/android/i.test(userAgent)) {
-        console.log('[PWA Debug] Platform detected: Android');
-      } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
-        console.log('[PWA Debug] Platform detected: iOS');
-      } else {
-        console.log('[PWA Debug] Platform detected: Desktop');
-      }
-
-      if (navigator.share) {
-        try {
-          await navigator.share({
-            title: 'Zona Coworking',
-            text: 'Instala esta aplicación',
-            url: window.location.href,
-          });
-          console.log('[PWA Debug] Share API triggered for manual installation');
-        } catch (error) {
-          console.log('[PWA Debug] Error triggering share API:', error);
-        }
-      } else {
-        console.log('[PWA Debug] Minimal fallback (Share API unsupported)');
-      }
+      alert('Installation not available on this device');
     }
   };
 
@@ -127,11 +101,6 @@ export function InstallPWABanner() {
               <div className="flex-1 min-w-0">
                 <h4 className="text-brand-blue font-bold text-sm flex items-center gap-2 truncate">
                   Zona Coworking
-                  {isFallback && (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-widest leading-none">
-                      <Info size={10} /> Fallback
-                    </span>
-                  )}
                 </h4>
                 <p className="text-slate-500 text-[11px] sm:text-xs mt-0.5 leading-snug truncate">
                   Instala esta app para una experiencia app-like más rápida.
@@ -144,7 +113,7 @@ export function InstallPWABanner() {
                 onClick={handleInstallClick}
                 className="px-3 sm:px-4 py-2 bg-brand-orange hover:bg-[#E68505] text-white text-[11px] sm:text-xs font-bold rounded-lg transition-colors active:scale-[0.98] shadow-sm shadow-orange-500/20 flex items-center justify-center gap-1.5"
               >
-                <Download size={14} /> {isFallback ? "Install App" : "Instalar"}
+                <Download size={14} /> Instalar
               </button>
               <button 
                 onClick={handleDismiss}
