@@ -56,9 +56,19 @@ createRoot(document.getElementById('root')!).render(
 console.log("✅ App Inicializada correctamente - FIN");
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    for (const registration of registrations) {
-      registration.unregister();
+  window.addEventListener('load', () => {
+    const isDevEnv = import.meta.env.DEV || window.location.hostname.includes('ais-dev-');
+    
+    if (isDevEnv) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      }).catch(() => {});
+    } else {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.error('ServiceWorker registration failed: ', err);
+      });
     }
-  }).catch(() => {});
+  });
 }
