@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Download, Share, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function InstallPWABanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const deferredPromptRef = useRef<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOSFolder, setIsIOSFolder] = useState(false);
   const [isSimulation, setIsSimulation] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
 
   useEffect(() => {
     const isDevEnv = window.location.hostname.includes('ais-dev-');
@@ -38,12 +40,17 @@ export function InstallPWABanner() {
       return;
     }
 
+    let fallbackTimer: NodeJS.Timeout;
+
     // Android/Chrome logic
     const handleBeforeInstallPrompt = (e: any) => {
       console.log('[PWA Debug] beforeinstallprompt event fired.');
       e.preventDefault();
       setDeferredPrompt(e);
+      deferredPromptRef.current = e;
       setShowInstallBanner(true);
+      setIsFallback(false);
+      clearTimeout(fallbackTimer);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -57,12 +64,32 @@ export function InstallPWABanner() {
       setShowInstallBanner(true);
     } else if (!isStandalone) {
       console.log('[PWA Debug] Waiting for beforeinstallprompt event...');
+      
+      fallbackTimer = setTimeout(() => {
+        if (!deferredPromptRef.current) {
+          console.log('[PWA Debug] beforeinstallprompt not fired in 2.5s. Falling back to manual install banner.');
+          setIsFallback(true);
+          setShowInstallBanner(true);
+        }
+      }, 2500);
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
     };
   }, []);
+
+  const showPlatformInstructions = () => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/android/i.test(userAgent)) {
+      alert("Android: Tap menu (⋮) → Install App");
+    } else if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) {
+      alert("iOS: Tap Share → Add to Home Screen");
+    } else {
+      alert("Desktop: Click install icon in address bar");
+    }
+  };
 
   const handleInstallClick = async () => {
     if (isSimulation) {
@@ -73,7 +100,12 @@ export function InstallPWABanner() {
       return;
     }
 
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      console.log('[PWA Debug] No deferredPrompt available, showing manual instructions.');
+      showPlatformInstructions();
+      return;
+    }
+
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
@@ -84,6 +116,7 @@ export function InstallPWABanner() {
       console.log('[PWA Debug] User dismissed the install prompt.');
     }
     setDeferredPrompt(null);
+    deferredPromptRef.current = null;
   };
 
   const handleDismiss = () => {
@@ -115,6 +148,11 @@ export function InstallPWABanner() {
                       <Info size={10} /> Preview
                     </span>
                   )}
+                  {isFallback && !isSimulation && !isIOSFolder && (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[9px] font-bold uppercase tracking-widest leading-none">
+                      <Info size={10} /> Fallback
+                    </span>
+                  )}
                 </h4>
                 {isIOSFolder ? (
                   <p className="text-slate-500 text-[11px] sm:text-xs mt-0.5 leading-snug">
@@ -133,12 +171,12 @@ export function InstallPWABanner() {
             </div>
             
             <div className="flex items-center gap-2 flex-shrink-0">
-              {!isIOSFolder && (
+              {(!isIOSFolder || isFallback) && (
                 <button 
                   onClick={handleInstallClick}
                   className="px-3 sm:px-4 py-2 bg-brand-orange hover:bg-[#E68505] text-white text-[11px] sm:text-xs font-bold rounded-lg transition-colors active:scale-[0.98] shadow-sm shadow-orange-500/20 flex items-center justify-center gap-1.5"
                 >
-                  <Download size={14} /> Instalar
+                  <Download size={14} /> {isFallback ? "Install App" : "Instalar"}
                 </button>
               )}
               <button 
