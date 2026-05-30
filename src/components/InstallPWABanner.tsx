@@ -1,26 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { X, Download, Share } from 'lucide-react';
+import { X, Download, Share, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export function InstallPWABanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOSFolder, setIsIOSFolder] = useState(false);
+  const [isSimulation, setIsSimulation] = useState(false);
 
   useEffect(() => {
+    const isDevEnv = window.location.hostname.includes('ais-dev-');
+    const hasServiceWorker = 'serviceWorker' in navigator;
+    
+    console.log(`[PWA Debug] Current Environment: ${window.location.hostname}`);
+    console.log(`[PWA Debug] Service Worker supported: ${hasServiceWorker}`);
+
     // Check if dismissed previously
     const dismissed = localStorage.getItem('pwa_banner_dismissed');
     if (dismissed === 'true') {
+      console.log('[PWA Debug] Banner previously dismissed by user.');
       return;
     }
 
     // Check if already installed (standalone mode)
-    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    console.log(`[PWA Debug] Installability status - Is standalone: ${isStandalone}`);
+
+    if (isStandalone && !isDevEnv) {
+      console.log('[PWA Debug] App is already installed. Hiding banner.');
+      return;
+    }
+
+    if (isDevEnv) {
+      console.log('[PWA Debug] AI Studio Development Preview detected. Forcing install prompt simulation.');
+      setIsSimulation(true);
+      setShowInstallBanner(true);
       return;
     }
 
     // Android/Chrome logic
     const handleBeforeInstallPrompt = (e: any) => {
+      console.log('[PWA Debug] beforeinstallprompt event fired.');
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallBanner(true);
@@ -30,11 +50,13 @@ export function InstallPWABanner() {
 
     // iOS logic
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    const isStandalone = (window.navigator as any).standalone === true;
 
     if (isIOS && !isStandalone) {
+      console.log('[PWA Debug] iOS device detected. Showing fallback iOS installation message.');
       setIsIOSFolder(true);
       setShowInstallBanner(true);
+    } else if (!isStandalone) {
+      console.log('[PWA Debug] Waiting for beforeinstallprompt event...');
     }
 
     return () => {
@@ -43,17 +65,29 @@ export function InstallPWABanner() {
   }, []);
 
   const handleInstallClick = async () => {
+    if (isSimulation) {
+      console.log('[PWA Debug] Simulated install button clicked.');
+      alert('Development Preview - Install prompt simulation.\n\nIn a production environment, the browser native install dialog would appear here.');
+      setShowInstallBanner(false);
+      localStorage.setItem('pwa_banner_dismissed', 'true');
+      return;
+    }
+
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
+      console.log('[PWA Debug] User accepted the install prompt.');
       setShowInstallBanner(false);
       localStorage.setItem('pwa_banner_dismissed', 'true');
+    } else {
+      console.log('[PWA Debug] User dismissed the install prompt.');
     }
     setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
+    console.log('[PWA Debug] User manually dismissed the banner.');
     setShowInstallBanner(false);
     localStorage.setItem('pwa_banner_dismissed', 'true');
   };
@@ -74,10 +108,21 @@ export function InstallPWABanner() {
                 <img src="https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png" alt="Icono" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-brand-blue font-bold text-sm truncate">Zona Coworking</h4>
+                <h4 className="text-brand-blue font-bold text-sm flex items-center gap-2 truncate">
+                  Zona Coworking
+                  {isSimulation && (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-bold uppercase tracking-widest leading-none">
+                      <Info size={10} /> Preview
+                    </span>
+                  )}
+                </h4>
                 {isIOSFolder ? (
                   <p className="text-slate-500 text-[11px] sm:text-xs mt-0.5 leading-snug">
                     Instala esta app: Toca Compartir <Share size={12} className="inline mx-[2px] align-text-bottom text-slate-700" /> y "Agregar a inicio".
+                  </p>
+                ) : isSimulation ? (
+                  <p className="text-slate-500 text-[11px] sm:text-xs mt-0.5 leading-snug truncate">
+                    Development Preview - Install prompt simulation.
                   </p>
                 ) : (
                   <p className="text-slate-500 text-[11px] sm:text-xs mt-0.5 leading-snug truncate">
