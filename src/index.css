@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -12,14 +12,106 @@
 }
 
 @layer base {
-  :root {
-    --bg-color: #fcfcfd;
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
   
   html, body, #root {
-    @apply h-full w-full m-0 p-0 overflow-hidden bg-[var(--bg-color)] text-slate-800;
+    @apply h-full w-full m-0 p-0 overflow-hidden text-slate-800;
+    background-color: #F3F4F6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* --- MOBILE VERSION (0px - 767px) --- */
+@media (max-width: 767px) {
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+  }
+  
+  .desktop-sidebar {
+    display: none !important;
+  }
+  
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 80px; /* space for bottom nav */
+  }
+  
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+    background-color: white;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 24px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  
+  .mobile-fab-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .mobile-fab {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 10px;
+    z-index: 10000;
+  }
+}
+
+/* --- DESKTOP VERSION (768px and up) --- */
+@media (min-width: 768px) {
+  .app-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+  }
+  
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  
+  .mobile-header {
+    display: none !important;
+  }
+  
+  .desktop-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+    border-right: 1px solid #f1f5f9;
+  }
+  
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 40px;
+  }
+  
+  .desktop-main-container {
+    max-width: 1300px;
+    width: 100%;
   }
 }
 

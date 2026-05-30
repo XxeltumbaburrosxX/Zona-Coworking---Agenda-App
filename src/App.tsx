@@ -126,12 +126,11 @@ export default function App() {
 
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--bg-color)] text-slate-800 font-sans">
+    <div className="font-sans app-layout">
       <InstallPWABanner />
-      <div className="flex flex-1 overflow-hidden">
         
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-xl font-display font-bold text-brand-blue mb-2">¿Cerrar Sesión?</h3>
             <p className="text-sm text-slate-600 mb-8 font-medium">Estás a punto de salir de tu cuenta.</p>
@@ -166,7 +165,7 @@ export default function App() {
       />}
       
       {/* 1. Left Sidebar Navigation - Minimal & Elegant */}
-      <aside className="w-[250px] bg-white border-r border-slate-100 flex flex-col justify-between hidden md:flex shrink-0">
+      <aside className="desktop-sidebar">
         <div className="p-8 pb-4">
           <img src={LOGO_COLOR} alt="Zona Coworking" className="h-8 w-auto mb-12" />
           
@@ -195,7 +194,7 @@ export default function App() {
           </nav>
         </div>
 
-        <div className="p-6 border-t border-slate-100">
+        <div className="p-6 border-t border-slate-100 mt-auto">
           <div className="flex items-center gap-3 mb-6 px-2">
             <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-semibold border border-brand-blue/20">
               {user.email?.charAt(0).toUpperCase()}
@@ -215,22 +214,20 @@ export default function App() {
       </aside>
 
       {/* 2. Main Content Area */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-100 shrink-0">
-          <img src={LOGO_COLOR} alt="Zona" className="h-6" />
-          <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-400 hover:text-red-500 p-2">
-            <LogOut size={20} />
-          </button>
-        </header>
-        
-        <div className="flex-1 overflow-y-auto p-4 md:p-10 hide-scrollbar flex flex-col items-center">
+      <main className="main-content hide-scrollbar relative">
+        <div className="desktop-main-container">
+            {/* Mobile Header */}
+            <header className="mobile-header flex items-center justify-between p-4 mb-4 bg-white rounded-2xl shadow-sm md:hidden shrink-0">
+              <img src={LOGO_COLOR} alt="Zona" className="h-6" />
+              <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-400 hover:text-red-500 p-2">
+                <LogOut size={20} />
+              </button>
+            </header>
             
-            <div className="w-full max-w-4xl pb-24 md:pb-0">
+            <div className="w-full">
               {activeMenu === 'agenda' && (
                 <>
-                  <header className="mb-8 mt-2 flex justify-between items-end">
+                  <header className="mb-8 mt-2 flex justify-between items-end px-4 md:px-0">
                     <div>
                       <h1 className="text-3xl font-display font-bold text-brand-blue tracking-tight">Hub de Reservas</h1>
                       <p className="text-[#6b7280] mt-1">Coordinación de actividades y ocupación en tiempo real</p>
@@ -242,7 +239,9 @@ export default function App() {
                       <Plus size={16} /> Nueva Reserva
                     </button>
                   </header>
-                  <NextEventCounter events={events} isLoading={isEventsLoading} />
+                  <div className="px-4 md:px-0">
+                    <NextEventCounter events={events} isLoading={isEventsLoading} />
+                  </div>
                 </>
               )}
 
@@ -254,7 +253,7 @@ export default function App() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
                     transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start px-4 md:px-0"
                   >
                     {/* Left Side: Calendar Component */}
                     <div className="lg:col-span-5 relative">
@@ -289,7 +288,7 @@ export default function App() {
                     </div>
 
                     {/* Right Side: Flowing list of events */}
-                    <div className="lg:col-span-7 pb-24 md:pb-0">
+                    <div className="lg:col-span-7">
                       <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-display font-bold text-brand-blue capitalize">
                           {formattedSelectedDate}
@@ -381,33 +380,30 @@ export default function App() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -15 }}
                     transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="w-full"
+                    className="w-full px-4 md:px-0"
                   >
                     <MetricsDashboard events={events} />
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
-
         </div>
-
       </main>
-      </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-6 py-2 flex justify-between items-center z-40 pb-[calc(8px+env(safe-area-inset-bottom))]">
+      <div className="mobile-bottom-nav">
         <button 
           onClick={() => setActiveMenu('agenda')}
-          className={`flex flex-col items-center gap-1 flex-1 py-1 ${activeMenu === 'agenda' ? 'text-brand-blue' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-1 py-1 flex-1 ${activeMenu === 'agenda' ? 'text-brand-blue' : 'text-slate-400'}`}
         >
           <CalendarIcon size={24} className={activeMenu === 'agenda' ? 'fill-brand-blue/10' : ''} />
           <span className="text-[10px] font-semibold">Agenda</span>
         </button>
         
-        <div className="flex-1 flex justify-center -mt-8">
+        <div className="mobile-fab-wrapper flex-1">
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="w-14 h-14 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 border-[6px] border-white hover:scale-105 transition-transform"
+            className="mobile-fab w-14 h-14 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 border-[6px] border-white hover:scale-105 transition-transform"
           >
             <Plus size={24} />
           </button>
@@ -415,7 +411,7 @@ export default function App() {
 
         <button 
           onClick={() => setActiveMenu('metrics')}
-          className={`flex flex-col items-center gap-1 flex-1 py-1 ${activeMenu === 'metrics' ? 'text-brand-blue' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-1 py-1 flex-1 ${activeMenu === 'metrics' ? 'text-brand-blue' : 'text-slate-400'}`}
         >
           <PieChart size={24} className={activeMenu === 'metrics' ? 'fill-brand-blue/10' : ''} />
           <span className="text-[10px] font-semibold">Métricas</span>
