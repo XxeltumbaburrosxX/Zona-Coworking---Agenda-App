@@ -57,7 +57,7 @@ console.log("✅ App Inicializada correctamente - FIN");
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    const isDevEnv = import.meta.env.DEV || window.location.hostname.includes('ais-dev-');
+    const isDevEnv = (import.meta as any).env?.DEV || window.location.hostname.includes('ais-dev-');
     
     if (isDevEnv) {
       navigator.serviceWorker.getRegistrations().then(registrations => {

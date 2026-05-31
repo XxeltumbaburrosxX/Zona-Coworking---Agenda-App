@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, Plus, PieChart, Share, 
-  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Hash
+  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Hash, Settings
 } from 'lucide-react';
 import { db, auth } from './firebase';
 import { collection, onSnapshot, query, doc } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { AddEventModal } from './components/AddEventModal';
 import { MetricsDashboard } from './components/MetricsDashboard';
 import { NextEventCounter } from './components/NextEventCounter';
 import { InstallPWABanner } from './components/InstallPWABanner';
+import { UserProfileModal } from './components/UserProfileModal';
 
 // A beautifully minimal layout
 export default function App() {
@@ -26,8 +27,10 @@ export default function App() {
   
   // User Config State
   const [usersConfig, setUsersConfig] = useState<Record<string, string>>({});
+  const [usersProfile, setUsersProfile] = useState<Record<string, { color?: string; displayName?: string; email?: string }>>({});
   const [isColorSelectionRequired, setIsColorSelectionRequired] = useState(false);
   const [userConfigLoaded, setUserConfigLoaded] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -58,22 +61,29 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Listen to users_config for all users (to color events) and check current user
+  // Listen to users_config for all users (to color events and fetch usernames) and check current user
   useEffect(() => {
     if (!user || !db) return;
     const unsubUsers = onSnapshot(collection(db, 'users_config'), (snapshot) => {
       const configMap: Record<string, string> = {};
+      const profileMap: Record<string, { color?: string; displayName?: string; email?: string }> = {};
       let currentUserHasColor = false;
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         if (data.color) {
           configMap[docSnap.id] = data.color;
         }
+        profileMap[docSnap.id] = {
+          color: data.color || '',
+          displayName: data.displayName || '',
+          email: data.email || ''
+        };
         if (docSnap.id === user.uid && data.color) {
           currentUserHasColor = true;
         }
       });
       setUsersConfig(configMap);
+      setUsersProfile(profileMap);
       setIsColorSelectionRequired(!currentUserHasColor);
       setUserConfigLoaded(true);
     });
@@ -196,18 +206,34 @@ export default function App() {
         </div>
 
         <div className="p-6 border-t border-slate-100 mt-auto">
-          <div className="flex items-center gap-3 mb-6 px-2">
-            <div className="w-10 h-10 rounded-full bg-brand-blue/10 flex items-center justify-center text-brand-blue font-semibold border border-brand-blue/20">
-              {user.email?.charAt(0).toUpperCase()}
+          <div 
+            onClick={() => setIsProfileModalOpen(true)}
+            className="flex items-center justify-between p-2 -mx-2 rounded-2xl hover:bg-slate-50 transition-all cursor-pointer group mb-4"
+            title="Configurar Perfil"
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm transition-transform group-hover:scale-105"
+                style={{ backgroundColor: usersConfig[user.uid] || '#182865' }}
+              >
+                {(usersProfile[user.uid]?.displayName || user.displayName || 'Staff').charAt(0).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-semibold text-brand-blue truncate max-w-[120px]">
+                  {usersProfile[user.uid]?.displayName || user.displayName || 'Staff Zona'}
+                </p>
+                <p className="text-xs text-slate-500 truncate max-w-[120px]">
+                  {usersProfile[user.uid]?.email || user.email}
+                </p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-brand-blue truncate">{user.displayName || 'Staff Zona'}</p>
-              <p className="text-xs text-slate-500 truncate">{user.email}</p>
+            <div className="text-slate-400 group-hover:text-brand-orange hover:bg-slate-100 p-1.5 rounded-lg transition-colors">
+              <Settings size={15} className="group-hover:rotate-45 transition-transform duration-300" />
             </div>
           </div>
           <button 
             onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex justify-center items-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+            className="w-full flex justify-center items-center gap-2 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer animate-none"
           >
             <LogOut size={16} /> Cerrar Sesión
           </button>
@@ -218,9 +244,26 @@ export default function App() {
       <main className="main-content hide-scrollbar relative">
         <div className="desktop-main-container">
             {/* Mobile Header */}
-            <header className="mobile-header flex items-center justify-between p-4 mb-4 bg-white rounded-2xl shadow-sm md:hidden shrink-0">
-              <img src={LOGO_COLOR} alt="Zona" className="h-6" />
-              <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-400 hover:text-red-500 p-2">
+            <header className="mobile-header flex items-center justify-between p-4 mb-4 bg-white rounded-2xl shadow-sm md:hidden shrink-0 gap-2">
+              <div 
+                onClick={() => setIsProfileModalOpen(true)}
+                className="flex items-center gap-2 cursor-pointer group shrink-0"
+                title="Configurar Perfil"
+              >
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                  style={{ backgroundColor: usersConfig[user.uid] || '#182865' }}
+                >
+                  {(usersProfile[user.uid]?.displayName || user.displayName || 'Staff').charAt(0).toUpperCase()}
+                </div>
+                <div className="hidden xs:block text-left">
+                  <p className="text-[11px] font-bold text-brand-blue truncate max-w-[80px]">
+                    {usersProfile[user.uid]?.displayName || user.displayName || 'Staff Zona'}
+                  </p>
+                </div>
+              </div>
+              <img src={LOGO_COLOR} alt="Zona" className="h-5 object-contain" />
+              <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-400 hover:text-red-500 p-2 shrink-0">
                 <LogOut size={20} />
               </button>
             </header>
@@ -418,6 +461,11 @@ export default function App() {
           <span className="text-[10px] font-semibold">Métricas</span>
         </button>
       </div>
+      
+      {/* 4. Edit Profile Modal */}
+      {isProfileModalOpen && (
+        <UserProfileModal onClose={() => setIsProfileModalOpen(false)} />
+      )}
 
     </div>
     </div>

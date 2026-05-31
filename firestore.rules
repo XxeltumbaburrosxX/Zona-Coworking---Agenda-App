@@ -25,6 +25,12 @@ service cloud.firestore {
         && isValidUser(incoming());
     }
 
+    // Users Config (Color & profile information)
+    match /users_config/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+    }
+
     // Events
     function isValidEvent(data) {
       return data.keys().hasAll(['eventName', 'clientName', 'type', 'roomId', 'attendees', 'date', 'startTime', 'endTime', 'createdBy'])
