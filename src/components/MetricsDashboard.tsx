@@ -11,14 +11,21 @@ export function MetricsDashboard({ events }: Props) {
   const { metrics, distributionData, peakHoursData } = useMemo(() => {
     const now = new Date();
     
-    // Calculate last 30 days
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      return d.toISOString().split('T')[0];
-    });
+    // Calculate 30 days ago and 30 days ahead to capture both past and future bookings
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-    const monthlyEvents = events.filter(e => last30Days.includes(e.date));
+    const thirtyDaysAhead = new Date();
+    thirtyDaysAhead.setDate(thirtyDaysAhead.getDate() + 30);
+    thirtyDaysAhead.setHours(23, 59, 59, 999);
+
+    const monthlyEvents = events.filter(e => {
+      if (!e.date) return false;
+      // Parse local date safely
+      const eventDate = new Date(e.date + 'T00:00:00');
+      return eventDate >= thirtyDaysAgo && eventDate <= thirtyDaysAhead;
+    });
 
     // Area 1: Ocupación por Salón
     const roomCounts = monthlyEvents.reduce((acc, curr) => {
@@ -65,11 +72,11 @@ export function MetricsDashboard({ events }: Props) {
   const handleShare = () => {
     const todayStr = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     const text = `📊 *Reporte de Gestión - Zona Coworking*
-🗓 Periodo: Últimos 30 días (${todayStr})
+🗓 Periodo: Rango de 30 días (Paso y Futuro) (${todayStr})
 
 🏢 *Espacio más ocupado:* ${metrics.mostBookedName}
 ✅ *Reservas totales:* ${metrics.monthlyCount}
-👥 *Asistencia promedio est.:* ${metrics.totalAttendees} personas
+👥 *Asistencia total est.:* ${metrics.totalAttendees} personas
 
 💡 _Nota: Reporte de analíticas autogenerado para el equipo operativo._`;
 
@@ -82,7 +89,7 @@ export function MetricsDashboard({ events }: Props) {
       <header className="mb-8 mt-2 flex justify-between items-end flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-brand-blue tracking-tight">Métricas y Reportes</h1>
-          <p className="text-slate-500 mt-1">Visión de 30 días del uso de espacios y flujos operativos</p>
+          <p className="text-slate-500 mt-1">Visión de 30 días (pasados y futuros) del uso de espacios y flujos operativos</p>
         </div>
         <button 
           onClick={handleShare}
