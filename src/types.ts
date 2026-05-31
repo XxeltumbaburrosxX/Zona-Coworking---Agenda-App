@@ -46,7 +46,26 @@ export const ROOMS: Room[] = [
   { id: '6', name: 'Río San Juan', area: 23, capacity: 20, color: 'bg-indigo-500', dotColor: '#6366f1' },
 ];
 
-export const COLOR_OPTIONS = ['#182865', '#FF9305', '#28A745', '#DC3545', '#8B5CF6', '#EAB308'];
+export const COLOR_OPTIONS = [
+  '#182865', // Azul Marinero (Original)
+  '#FF9305', // Naranja (Original)
+  '#28A745', // Verde (Original)
+  '#DC3545', // Rojo (Original)
+  '#8B5CF6', // Violeta (Original)
+  '#EAB308', // Amarillo (Original)
+  '#EC4899', // Rosado Dulce (Femenino)
+  '#F472B6', // Rosa Pastel (Femenino)
+  '#DB2777', // Magenta Elegante (Femenino)
+  '#9333EA', // Púrpura Profundo (Femenino/Neutro)
+  '#3B82F6', // Azul Eléctrico (Masculino)
+  '#0284C7', // Azul Océano (Masculino)
+  '#4F46E5', // Índigo Moderno (Masculino/Neutro)
+  '#64748B', // Azul Pizarra (Masculino)
+  '#0D9488', // Verde Azulado/Teal (Neutro)
+  '#10B981', // Verde Esmeralda (Neutro)
+  '#06B6D4', // Azul Cian (Neutro)
+  '#EA580C'  // Óxido / Terracota (Neutro)
+];
 
 export const LOGO_WHITE = "https://i.ibb.co/Kp9Hh2Vt/Logo-Blanco.png";
 export const LOGO_COLOR = "https://i.ibb.co/ZzzzFy6S/Logo.png";
