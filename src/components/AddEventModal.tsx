@@ -274,13 +274,27 @@ END:VCALENDAR`;
         className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh] transition-transform duration-300 ease-out`}
         style={{ transform: (isOpen && !isClosing) ? 'translateY(0)' : 'translateY(100%)' }}
       >
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0 sticky top-0 bg-white z-10 font-sans">
           <h2 className="text-xl font-display font-bold text-brand-blue">
             {editingEvent ? 'Editar Reserva' : 'Nueva Reserva'}
           </h2>
-          <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            {editingEvent && (
+              <button 
+                type="button" 
+                onClick={handleDelete} 
+                disabled={deleting}
+                className="p-2 sm:p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 border border-red-100 bg-red-50/20 sm:border-transparent sm:bg-transparent"
+                title="Eliminar Reserva"
+              >
+                <Trash2 size={18} />
+                <span className="text-xs font-bold sm:hidden pr-1">Eliminar</span>
+              </button>
+            )}
+            <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <X size={20} />
+            </button>
+          </div>
         </div>
         
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 minimal-scrollbar pb-8 relative">
