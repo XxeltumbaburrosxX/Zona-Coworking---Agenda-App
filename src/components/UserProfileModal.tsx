@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { X, User, Mail, ShieldAlert, KeyRound, CheckCircle2, Lock, Palette } from 'lucide-react';
 import { db, auth } from '../firebase';
 import { doc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
@@ -25,7 +25,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // 1. Fetch current user colors and configurations from firestore
+  // Fetch current user colors and configurations from firestore
   useEffect(() => {
     if (!db || !currentUser) return;
     
@@ -50,7 +50,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     e.preventDefault();
     if (!currentUser || !db) return;
 
-    setSaving(false);
     setErrorMsg('');
     setSuccessMsg('');
     
@@ -82,7 +81,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       const isPasswordChanged = password.trim().length > 0;
 
       if (isEmailChanged || isPasswordChanged) {
-        // If they requested email/password update, we might need pre-emptive or reactive re-authentication
         if (requireCurrentPassword && !currentPasswordConfirm) {
           setSaving(false);
           setErrorMsg('Por favor introduce tu contraseña actual para confirmar los cambios de tu cuenta.');
@@ -132,9 +130,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         confirmButtonColor: '#182865'
       });
 
-      // Let state bubble up
-      setTimeout(onClose, 800);
-
     } catch (err: any) {
       console.error('Error updating profile:', err);
       if (err.code === 'auth/wrong-password') {
@@ -155,7 +150,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         initial={{ opacity: 0, scale: 0.95, y: 15 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }} 
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-7 relative border border-slate-100 my-8"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-7 relative border border-slate-100 my-8 text-slate-800 font-sans"
       >
         {/* Header decoration */}
         <div className="absolute top-0 left-0 right-0 h-2.5 bg-gradient-to-r from-[#182865] to-[#FF9305] rounded-t-3xl" />
@@ -167,12 +162,12 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
           <X size={18} />
         </button>
 
-        <div className="mb-6 mt-1 flex items-center gap-3">
+        <div className="mb-5 mt-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#182865]/10 flex items-center justify-center text-[#182865]">
             <User size={20} className="stroke-[2.5]" />
           </div>
           <div>
-            <h3 className="text-xl font-display font-black text-[#182865] tracking-tight">Mi Perfil</h3>
+            <h3 className="text-lg font-display font-black text-[#182865] tracking-tight">Mi Perfil</h3>
             <p className="text-slate-500 text-xs mt-0.5">Configura tu nombre en agenda y seguridad</p>
           </div>
         </div>
@@ -192,7 +187,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         )}
 
         <form onSubmit={handleUpdateProfile} className="space-y-4">
-          
           {/* NOMBE COMPLETO */}
           <div>
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 label-field">
@@ -301,7 +295,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               {saving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
-
         </form>
       </motion.div>
     </div>
