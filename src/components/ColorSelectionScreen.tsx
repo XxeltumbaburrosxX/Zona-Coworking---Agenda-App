@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { db, auth } from '../firebase';
-import { collection, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { updatePassword, updateProfile } from 'firebase/auth';
 import { COLOR_OPTIONS, LOGO_COLOR } from '../types';
 import { CheckCircle2, Lock, ShieldAlert, User, Paintbrush } from 'lucide-react';
@@ -16,16 +16,52 @@ export function ColorSelectionScreen({ onComplete }: { onComplete: () => void })
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [staleDocIds, setStaleDocIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!db) return;
+    const currentEmail = auth?.currentUser?.email?.toLowerCase();
+    const currentUid = auth?.currentUser?.uid;
+
     const unsub = onSnapshot(collection(db, 'users_config'), (snapshot) => {
       const colors: string[] = [];
+      const staleIds: string[] = [];
+      let foundUserOldColor: string | null = null;
+      let foundUserOldName: string = '';
+
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        if (data.color) colors.push(data.color.toUpperCase());
+        const docEmail = data.email?.toLowerCase();
+        
+        const isOwnDoc = docSnap.id === currentUid;
+        const hasSameEmail = currentEmail && docEmail === currentEmail;
+
+        if (isOwnDoc || hasSameEmail) {
+          if (data.color) {
+            foundUserOldColor = data.color;
+          }
+          if (data.displayName) {
+            foundUserOldName = data.displayName;
+          }
+          if (docSnap.id !== currentUid) {
+            staleIds.push(docSnap.id);
+          }
+        } else {
+          if (data.color) {
+            colors.push(data.color.toUpperCase());
+          }
+        }
       });
+
       setTakenColors(colors);
+      setStaleDocIds(staleIds);
+      
+      if (foundUserOldColor) {
+        setSelectedColor(prev => prev || foundUserOldColor);
+      }
+      if (foundUserOldName) {
+        setDisplayName(prev => prev || foundUserOldName);
+      }
       setLoading(false);
     });
     return () => unsub();
@@ -83,6 +119,17 @@ export function ColorSelectionScreen({ onComplete }: { onComplete: () => void })
         email: currentUser.email || '',
         updatedAt: Date.now()
       });
+
+      // Clean up any stale records from old deleted accounts with the same email
+      if (staleDocIds.length > 0) {
+        for (const staleId of staleDocIds) {
+          try {
+            await deleteDoc(doc(db, 'users_config', staleId));
+          } catch (e) {
+            console.warn('Failed to delete stale config for ID:', staleId, e);
+          }
+        }
+      }
 
       Swal.fire({
         title: '¡Identidad Lista!',

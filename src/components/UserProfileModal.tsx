@@ -28,13 +28,19 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   // Fetch current user colors and configurations from firestore
   useEffect(() => {
     if (!db || !currentUser) return;
+    const currentEmail = currentUser.email?.toLowerCase();
     
     // Listen to firestore to fetch current identity colors and track taken colors
     const unsub = onSnapshot(collection(db, 'users_config'), (snapshot) => {
       const colors: string[] = [];
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        if (docSnap.id === currentUser.uid) {
+        const docEmail = data.email?.toLowerCase();
+        
+        const isOwnDoc = docSnap.id === currentUser.uid;
+        const hasSameEmail = currentEmail && docEmail === currentEmail;
+
+        if (isOwnDoc || hasSameEmail) {
           if (data.color) setSelectedColor(data.color);
         } else {
           if (data.color) colors.push(data.color.toUpperCase());
