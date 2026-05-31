@@ -29,7 +29,6 @@
   .app-layout {
     display: flex;
     flex-direction: column;
-    height: 100%;
     width: 100%;
   }
   
@@ -79,7 +78,6 @@
   .app-layout {
     display: flex;
     flex-direction: row;
-    height: 100%;
     width: 100%;
   }
   

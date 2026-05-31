@@ -17,6 +17,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- Global Early PWA Interceptor -->
+    <script>
+      window.deferredPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+        window.dispatchEvent(new CustomEvent('deferredpromptready', { detail: e }));
+      });
+    </script>
 </head>
 <body class="bg-gray-50 text-slate-900 antialiased font-sans selection:bg-orange-500/20 selection:text-orange-900 overflow-hidden">
     <div id="root" class="h-full w-full"></div>

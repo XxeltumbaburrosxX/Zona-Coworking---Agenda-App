@@ -20,18 +20,41 @@ export function InstallPWABanner() {
       return;
     }
 
-    // Android/Chrome logic - Native intercept
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      deferredPrompt = e;
+    // Double check with navigator.getInstalledRelatedApps if supported by the browser
+    if ('getInstalledRelatedApps' in navigator) {
+      (navigator as any).getInstalledRelatedApps().then((relatedApps: any[]) => {
+        if (relatedApps && relatedApps.length > 0) {
+          console.log('PWA is already installed on the device (related apps check)');
+          return; // Do not show banner
+        }
+      }).catch((err: any) => {
+        console.warn('Error checking installed related apps:', err);
+      });
+    }
+
+    // If we already captured the event globally in index.html, use it immediately!
+    if ((window as any).deferredPrompt) {
+      deferredPrompt = (window as any).deferredPrompt;
       setShowInstallBanner(true);
+    }
+
+    // Intercept native Chrome events (standard and custom dispatch)
+    const handlePromptReady = (e: any) => {
+      const event = e.detail || e;
+      if (event) {
+        event.preventDefault();
+        deferredPrompt = event;
+        setShowInstallBanner(true);
+      }
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('beforeinstallprompt', handlePromptReady);
+    window.addEventListener('deferredpromptready', handlePromptReady);
 
     // Lifecycle clean up on success
     const handleAppInstalled = () => {
       deferredPrompt = null;
+      (window as any).deferredPrompt = null;
       setShowInstallBanner(false);
       localStorage.setItem('pwa_banner_dismissed', 'true');
     };
@@ -39,22 +62,29 @@ export function InstallPWABanner() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeinstallprompt', handlePromptReady);
+      window.removeEventListener('deferredpromptready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-        localStorage.setItem('pwa_banner_dismissed', 'true');
+      try {
+        await deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        console.log('PWA installation choice:', choiceResult.outcome);
+        
+        if (choiceResult.outcome === 'accepted') {
+          localStorage.setItem('pwa_banner_dismissed', 'true');
+        }
+      } catch (err) {
+        console.error('Failed to trigger PWA native install prompt:', err);
+      } finally {
+        deferredPrompt = null;
+        (window as any).deferredPrompt = null;
         setShowInstallBanner(false);
       }
-      deferredPrompt = null;
     }
   };
 
@@ -91,9 +121,9 @@ export function InstallPWABanner() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button 
                 onClick={handleInstallClick}
-                className="px-3 sm:px-4 py-2 bg-[#FF9305] hover:bg-[#E68505] text-white text-[11px] sm:text-xs font-bold rounded-lg transition-colors active:scale-[0.98] shadow-sm shadow-[#FF9305]/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="px-3.5 sm:px-5 py-2 bg-[#FFCD00] hover:bg-[#E5B800] text-[#182865] text-[11.5px] sm:text-xs font-extrabold rounded-xl transition-all active:scale-[0.96] shadow-md shadow-[#FFCD00]/15 flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-lg hover:shadow-[#FFCD00]/25"
               >
-                <Download size={14} /> Instalar
+                <Download size={14} className="stroke-[2.5]" /> Instalar
               </button>
               <button 
                 onClick={handleDismiss}
