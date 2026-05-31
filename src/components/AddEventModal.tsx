@@ -43,7 +43,15 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
   const [date, setDate] = useState(editingEvent?.date ?? '');
   const [startTime, setStartTime] = useState(editingEvent?.startTime ?? '');
   const [endTime, setEndTime] = useState(editingEvent?.endTime ?? '');
-  const [roomLayout, setRoomLayout] = useState<RoomLayout | ''>(editingEvent?.roomLayout ?? '');
+  const [roomLayout, setRoomLayout] = useState<RoomLayout | ''>(() => {
+    const layout = editingEvent?.roomLayout as string | undefined;
+    if (!layout) return '';
+    if (layout === 'School') return 'Escuela';
+    if (layout === 'Theater') return 'Auditorio';
+    if (layout === 'U-Shape') return 'Mesa en U';
+    if (layout === 'Boardroom') return 'Directorio';
+    return layout as RoomLayout;
+  });
   const [customRoomLayout, setCustomRoomLayout] = useState('');
   const [notes, setNotes] = useState(editingEvent?.notes ?? '');
   const [resources, setResources] = useState({
@@ -124,23 +132,43 @@ END:VCALENDAR`;
     e.preventDefault();
     if (!auth?.currentUser || !db) return;
     
-    if (!eventName.trim() || !clientName.trim() || !type || !roomId || attendees === '' || !date || !startTime || !endTime) {
-      alert("Por favor completa todos los campos obligatorios y selecciona opciones válidas.");
+    if (!eventName.trim() || !clientName.trim() || !type || !roomId || attendees === '' || !date || !startTime || !endTime || !roomLayout) {
+      Swal.fire({
+        title: 'Formulario Incompleto',
+        text: 'Por favor completa todos los campos obligatorios, incluyendo la distribución del espacio.',
+        icon: 'warning',
+        confirmButtonColor: '#182865'
+      });
       return;
     }
 
     if (type === 'Otros' && !customType.trim()) {
-      alert("Por favor especifica el tipo de evento.");
+      Swal.fire({
+        title: 'Especificar Tipo',
+        text: 'Por favor especifica el tipo de evento.',
+        icon: 'warning',
+        confirmButtonColor: '#182865'
+      });
       return;
     }
 
     if (roomLayout === 'Otro' && !customRoomLayout.trim()) {
-      alert("Por favor especifica la distribución del espacio.");
+      Swal.fire({
+        title: 'Especificar Distribución',
+        text: 'Por favor especifica la distribución del espacio.',
+        icon: 'warning',
+        confirmButtonColor: '#182865'
+      });
       return;
     }
     
     if (Number(attendees) < 1) {
-      alert("El número de asistentes debe ser al menos 1.");
+      Swal.fire({
+        title: 'Asistencia Inválida',
+        text: 'El número de asistentes debe ser al menos 1.',
+        icon: 'warning',
+        confirmButtonColor: '#182865'
+      });
       return;
     }
 
@@ -148,7 +176,12 @@ END:VCALENDAR`;
     try {
       const conflict = await checkCollision();
       if (conflict) {
-        alert("¡Espacio ocupado! Ya existe un evento agendado en este horario y lugar. Detalles: " + conflict);
+        Swal.fire({
+          title: 'Espacio Ocupado',
+          text: '¡Espacio ocupado! Ya existe un evento agendado en este horario y lugar. Detalles: ' + conflict,
+          icon: 'error',
+          confirmButtonColor: '#182865'
+        });
         setLoading(false);
         return;
       }
@@ -307,20 +340,40 @@ END:VCALENDAR`;
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5 relative">
-                <label className="text-sm font-semibold text-slate-600">Espacio</label>
+                <label className="text-sm font-semibold text-slate-600">Espacio <span className="text-brand-orange font-bold">*</span></label>
                 <select required value={roomId} onChange={e => setRoomId(e.target.value)}
                   className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
                   <option value="" disabled>Selecciona un espacio...</option>
                   {ROOMS.map(r => <option key={r.id} value={r.id}>{r.name} (Max {r.capacity})</option>)}
                 </select>
               </div>
+
               <div className="space-y-1.5 relative flex flex-col">
-                <label className="text-sm font-semibold text-slate-600">Tipo de Evento</label>
+                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Layout size={16}/> Distribución del Espacio <span className="text-brand-orange font-bold">*</span></label>
+                <select required value={roomLayout} onChange={e => setRoomLayout(e.target.value as RoomLayout)}
+                  className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
+                  <option value="" disabled>Selecciona la distribución...</option>
+                  {['Escuela', 'Auditorio', 'Mesa en U', 'Directorio', 'Otro'].map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+                
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out ${roomLayout === 'Otro' ? 'max-h-24 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                   <input type="text" value={customRoomLayout} onChange={e => setCustomRoomLayout(e.target.value)}
+                    className="w-full px-4 py-3 h-12 min-h-[48px] bg-white border border-brand-orange/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition-all placeholder:text-slate-400" 
+                    placeholder="¿Qué tipo de distribución de espacio sería?" />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5 relative flex flex-col">
+                <label className="text-sm font-semibold text-slate-600">Tipo de Evento <span className="text-brand-orange font-bold">*</span></label>
                 <select required value={type} onChange={e => setType(e.target.value as EventType)}
                   className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
-                  <option value="" disabled>Elige el tipo...</option>
+                  <option value="" disabled>Elige el tipo de evento...</option>
                   {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 
@@ -330,8 +383,9 @@ END:VCALENDAR`;
                     placeholder="¿Qué tipo de evento es?" />
                 </div>
               </div>
-              <div className="space-y-1.5 relative">
-                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Users size={16}/> Cantidad de Personas</label>
+
+              <div className="space-y-1.5 relative flex flex-col justify-end">
+                <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Users size={16}/> Cantidad de Personas <span className="text-brand-orange font-bold">*</span></label>
                 <input required type="number" min="1" value={attendees} onChange={e => setAttendees(e.target.value === '' ? '' : parseInt(e.target.value))} 
                   className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
               </div>
@@ -343,40 +397,20 @@ END:VCALENDAR`;
                 onClick={() => setShowSetup(!showSetup)}
                 className="w-full min-h-[44px] flex items-center justify-between text-sm font-semibold text-brand-blue hover:text-brand-blue/80 transition-colors"
               >
-                <span>Logística y Notas Extras (Servicios opcionales)</span>
+                <span>Servicios y Notas Extras (Opcionales)</span>
                 <span className="text-xl leading-none">{showSetup ? '−' : '+'}</span>
               </button>
               
               {showSetup && (
                 <div className="mt-4 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3 relative flex flex-col">
-                      <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Layout size={16}/> Distribución del Espacio</label>
-                      <select value={roomLayout} onChange={e => setRoomLayout(e.target.value as RoomLayout)}
-                        className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all appearance-none cursor-pointer">
-                        <option value="" disabled>Ninguna (Por Defecto)...</option>
-                        {['School', 'Theater', 'U-Shape', 'Boardroom', 'Otro'].map(l => (
-                          <option key={l} value={l}>{l}</option>
-                        ))}
-                      </select>
-                      
-                      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${roomLayout === 'Otro' ? 'max-h-24 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
-                         <input type="text" value={customRoomLayout} onChange={e => setCustomRoomLayout(e.target.value)}
-                          className="w-full px-4 py-3 h-12 min-h-[48px] bg-white border border-brand-orange/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-orange/20 focus:border-brand-orange transition-all placeholder:text-slate-400" 
-                          placeholder="¿Qué tipo de distribución de espacio sería?" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 relative">
-                      <label className="text-sm font-semibold text-slate-600">Recursos y Servicios</label>
-                      
-                      <div className="grid grid-cols-1 gap-2 mt-2">
-                        <label className="flex items-center justify-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-1 sm:p-2 rounded-xl bg-slate-50 border border-slate-200 h-10 min-h-[44px] hover:border-brand-orange/30 transition-colors">
-                          <input type="checkbox" checked={resources.tv} onChange={e => setResources({...resources, tv: e.target.checked})} 
-                            className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
-                          <span>Pantalla TV</span>
-                        </label>
-                      </div>
+                  <div className="space-y-3 relative">
+                    <label className="text-sm font-semibold text-slate-600">Recursos y Servicios</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      <label className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-700 font-bold cursor-pointer p-2.5 rounded-xl bg-slate-50 border border-slate-200 h-11 min-h-[44px] hover:border-brand-orange/30 transition-colors">
+                        <input type="checkbox" checked={resources.tv} onChange={e => setResources({...resources, tv: e.target.checked})} 
+                          className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange/20" />
+                        <span>Pantalla TV</span>
+                      </label>
                     </div>
                   </div>
 
