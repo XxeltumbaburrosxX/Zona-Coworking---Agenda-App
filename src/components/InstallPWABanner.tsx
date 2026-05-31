@@ -47,7 +47,7 @@ export function InstallPWABanner() {
   });
 
   useEffect(() => {
-    // If already dismissed or running in standalone PWA, never show the banner
+    // Immediate immunity check: If already dismissed or running in standalone PWA, never show the banner
     const dismissed = localStorage.getItem('pwa_banner_dismissed') === 'true';
     if (dismissed || checkIfAppIsStandalone()) {
       setShowInstallBanner(false);
@@ -58,7 +58,7 @@ export function InstallPWABanner() {
     if ('getInstalledRelatedApps' in navigator) {
       (navigator as any).getInstalledRelatedApps().then((relatedApps: any[]) => {
         if (relatedApps && relatedApps.length > 0) {
-          // Already installed, don't show or shut banner down
+          // Already installed, don't show or shut banner down immediately
           setShowInstallBanner(false);
           return;
         }
@@ -79,7 +79,10 @@ export function InstallPWABanner() {
       if (event) {
         event.preventDefault();
         deferredPrompt = event;
-        setShowInstallBanner(true);
+        // Verify we are not standalone before showing
+        if (!checkIfAppIsStandalone()) {
+          setShowInstallBanner(true);
+        }
       }
     };
 
@@ -135,20 +138,24 @@ export function InstallPWABanner() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="flex-shrink-0 w-full bg-[#182865] border-b border-white/5 shadow-md relative z-50 overflow-hidden text-white font-sans"
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }} // Super snappy cubic transition
+          className="flex-shrink-0 w-full bg-gradient-to-r from-[#182865] via-[#1c2e75] to-[#121f52] border-b-2 border-[#FF9305]/85 shadow-lg relative z-50 overflow-hidden text-white font-sans"
         >
-          <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+          {/* Subtle Ambient background glow behind the logo */}
+          <div className="absolute -left-8 -top-8 w-24 h-24 bg-[#FF9305]/15 rounded-full blur-2xl pointer-events-none"></div>
+          
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 relative z-10">
             <div className="flex items-center gap-3 overflow-hidden flex-1">
-              <div className="flex-shrink-0 w-9 h-9 bg-white/10 backdrop-blur-sm rounded-xl overflow-hidden shadow-inner border border-white/15 hidden sm:block">
+              <div className="flex-shrink-0 w-9 h-9 bg-white/10 backdrop-blur-md rounded-xl overflow-hidden shadow-md border border-white/15">
                 <img src="https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png" alt="Icono" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-extrabold text-sm flex items-center gap-2 truncate text-white leading-normal">
+                <h4 className="font-extrabold text-sm flex items-center gap-1.5 truncate text-white leading-normal">
                   Zona Coworking
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#FF9305] animate-pulse"></span>
                 </h4>
-                <p className="text-blue-100 text-[11px] sm:text-xs leading-none mt-0.5 truncate">
-                  Instala el dashboard oficial para una experiencia más rápida y directa.
+                <p className="text-blue-100/90 text-[11px] sm:text-xs leading-none mt-0.5 truncate">
+                  Instala el dashboard oficial para una experiencia ultrarrápida y sin barras.
                 </p>
               </div>
             </div>
@@ -156,7 +163,7 @@ export function InstallPWABanner() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button 
                 onClick={handleInstallClick}
-                className="px-4 sm:px-5 py-2 bg-[#FFCD00] hover:bg-[#E5B800] text-[#182865] text-[11px] sm:text-xs font-black rounded-xl transition-all active:scale-[0.96] shadow-sm shadow-[#FFCD00]/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                className="px-4 sm:px-5 py-2 bg-[#FF9305] hover:bg-[#E08103] active:bg-[#CC7604] text-white text-[11.5px] sm:text-xs font-black rounded-xl transition-all active:scale-[0.96] shadow-md shadow-[#FF9305]/20 flex items-center justify-center gap-1.5 cursor-pointer hover:shadow-lg hover:shadow-[#FF9305]/30"
               >
                 <Download size={13} className="stroke-[3]" /> Instalar
               </button>
