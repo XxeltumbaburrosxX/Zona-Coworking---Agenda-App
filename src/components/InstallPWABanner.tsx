@@ -20,9 +20,6 @@ export function InstallPWABanner() {
       return;
     }
 
-    // Always show the banner if the app is NOT already installed in standalone mode
-    setShowInstallBanner(true);
-
     // Android/Chrome logic - Native intercept
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
@@ -58,9 +55,6 @@ export function InstallPWABanner() {
         setShowInstallBanner(false);
       }
       deferredPrompt = null;
-    } else {
-      // Simple alert if native prompt is not available
-      alert("La instalación nativa no está disponible en este navegador o la app ya está instalada.");
     }
   };
 

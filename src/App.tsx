@@ -126,34 +126,35 @@ export default function App() {
 
 
   return (
-    <div className="font-sans app-layout">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-[#F3F4F6] text-slate-800">
       <InstallPWABanner />
         
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-display font-bold text-brand-blue mb-2">¿Cerrar Sesión?</h3>
-            <p className="text-sm text-slate-600 mb-8 font-medium">Estás a punto de salir de tu cuenta.</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={() => setShowLogoutConfirm(false)} 
-                className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors text-sm"
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  if (auth) signOut(auth);
-                }} 
-                className="px-5 py-2 font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-500/20 flex items-center gap-2 text-sm"
-              >
-                <LogOut size={16} /> Salir
-              </button>
+      <div className="font-sans app-layout flex-1 overflow-hidden">
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+              <h3 className="text-xl font-display font-bold text-brand-blue mb-2">¿Cerrar Sesión?</h3>
+              <p className="text-sm text-slate-600 mb-8 font-medium">Estás a punto de salir de tu cuenta.</p>
+              <div className="flex justify-end gap-3">
+                <button 
+                  onClick={() => setShowLogoutConfirm(false)} 
+                  className="px-4 py-2 font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowLogoutConfirm(false);
+                    if (auth) signOut(auth);
+                  }} 
+                  className="px-5 py-2 font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm shadow-red-500/20 flex items-center gap-2 text-sm"
+                >
+                  <LogOut size={16} /> Salir
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {isModalOpen && <AddEventModal 
         onClose={() => {
@@ -418,6 +419,7 @@ export default function App() {
         </button>
       </div>
 
+    </div>
     </div>
   );
 }
