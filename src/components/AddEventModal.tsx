@@ -198,6 +198,28 @@ END:VCALENDAR`;
       return;
     }
 
+    if (parsedTotalCost > 0) {
+      if (!isRateValid) {
+        Swal.fire({
+          title: 'Tasa Requerida',
+          text: 'Debes ingresar una tasa de cambio válida si has registrado un abono en Bolívares.',
+          icon: 'warning',
+          confirmButtonColor: '#182865'
+        });
+        return;
+      }
+
+      if (!hasMet20Percent && !isTrustedClient) {
+        Swal.fire({
+          title: 'Abono Insuficiente',
+          text: `Se requiere un abono mínimo del 20% ($${minRequiredDeposit.toFixed(2)}) para agendar, o puedes marcarlo como Cliente de Confianza.`,
+          icon: 'warning',
+          confirmButtonColor: '#FF9305'
+        });
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const conflict = await checkCollision();
@@ -225,10 +247,10 @@ END:VCALENDAR`;
         roomLayout: (roomLayout === 'Otro' && customRoomLayout ? customRoomLayout : roomLayout) as RoomLayout,
         resources,
         notes,
-        totalCost: totalCost === '' ? undefined : Number(totalCost),
-        depositUSD: depositUSD === '' ? undefined : Number(depositUSD),
-        depositBS: depositBS === '' ? undefined : Number(depositBS),
-        exchangeRate: exchangeRate === '' ? undefined : Number(exchangeRate),
+        totalCost: parsedTotalCost,
+        depositUSD: parsedUSD,
+        depositBS: parsedBS,
+        exchangeRate: parsedRate,
         isTrustedClient,
         createdBy: auth.currentUser.uid,
         createdBy_Name: auth.currentUser.displayName ?? auth.currentUser.email ?? 'Staff',
@@ -457,7 +479,7 @@ END:VCALENDAR`;
                 </div>
                 <div className="space-y-1.5 relative">
                   <label className="text-sm font-semibold text-slate-600">Tasa de Cambio (Bs/$) {parsedBS > 0 && <span className="text-brand-orange font-bold">*</span>}</label>
-                  <input required={parsedBS > 0} type="number" min="0" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                  <input type="number" min="0" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
                     className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="40.00" />
                 </div>
               </div>
@@ -530,7 +552,7 @@ END:VCALENDAR`;
             <button type="button" onClick={handleClose} className="w-full sm:w-auto px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-white sm:bg-slate-100 border border-slate-200 sm:border-transparent shadow-sm sm:shadow-none">
               Cancelar
             </button>
-            <button type="submit" form="reservation-form" disabled={loading || !isFormValidFinancially} className="w-full flex-1 sm:flex-none sm:w-auto justify-center px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-white bg-brand-orange hover:bg-[#E68505] shadow-md shadow-orange-500/20 transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2">
+            <button type="submit" form="reservation-form" disabled={loading} className="w-full flex-1 sm:flex-none sm:w-auto justify-center px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-white bg-brand-orange hover:bg-[#E68505] shadow-md shadow-orange-500/20 transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2">
               {loading ? 'Guardando...' : 'Guardar y Confirmar'}
             </button>
           </div>
