@@ -71,16 +71,19 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
   const parsedTotalCost = Number(totalCost) || 0;
   const parsedUSD = Number(depositUSD) || 0;
   const parsedBS = Number(depositBS) || 0;
-  const parsedRate = Number(exchangeRate) || 1;
+  const parsedRate = Number(exchangeRate) || 1; // Default to 1 to avoid division by zero
+
+  const isCostValid = totalCost !== '' && parsedTotalCost > 0;
+  const isRateValid = parsedBS > 0 ? (exchangeRate !== '' && parsedRate > 0) : true;
 
   const totalDepositUSD = parsedUSD + (parsedBS / parsedRate);
-  const remainingBalance = parsedTotalCost - totalDepositUSD;
+  const remainingBalance = Math.max(0, parsedTotalCost - totalDepositUSD);
 
   // The 20% rule
   const minRequiredDeposit = parsedTotalCost * 0.2;
   const hasMet20Percent = totalDepositUSD >= minRequiredDeposit;
   const showTrustedToggle = parsedTotalCost > 0 && !hasMet20Percent;
-  const isFormValidFinancially = parsedTotalCost === 0 || hasMet20Percent || isTrustedClient;
+  const isFormValidFinancially = isCostValid && isRateValid && (hasMet20Percent || isTrustedClient);
 
   // Action: Generate ICS File
   const generateICS = () => {
@@ -436,8 +439,8 @@ END:VCALENDAR`;
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5 relative">
-                  <label className="text-sm font-semibold text-slate-600">Costo Total ($)</label>
-                  <input type="number" min="0" step="0.01" value={totalCost} onChange={e => setTotalCost(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                  <label className="text-sm font-semibold text-slate-600">Costo Total ($) <span className="text-brand-orange font-bold">*</span></label>
+                  <input required type="number" min="0" step="0.01" value={totalCost} onChange={e => setTotalCost(e.target.value === '' ? '' : parseFloat(e.target.value))} 
                     className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="0.00" />
                 </div>
                 <div className="space-y-1.5 relative">
@@ -451,8 +454,8 @@ END:VCALENDAR`;
                     className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="0.00" />
                 </div>
                 <div className="space-y-1.5 relative">
-                  <label className="text-sm font-semibold text-slate-600">Tasa de Cambio (Bs/$)</label>
-                  <input type="number" min="0" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                  <label className="text-sm font-semibold text-slate-600">Tasa de Cambio (Bs/$) {parsedBS > 0 && <span className="text-brand-orange font-bold">*</span>}</label>
+                  <input required={parsedBS > 0} type="number" min="0" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
                     className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="40.00" />
                 </div>
               </div>
