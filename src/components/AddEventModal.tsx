@@ -71,18 +71,20 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
   const parsedTotalCost = Number(totalCost) || 0;
   const parsedUSD = Number(depositUSD) || 0;
   const parsedBS = Number(depositBS) || 0;
-  const parsedRate = Number(exchangeRate) || 1; // Default to 1 to avoid division by zero
+  const parsedRate = Number(exchangeRate) || 1;
 
   const isCostValid = totalCost !== '' && parsedTotalCost > 0;
   const isRateValid = parsedBS > 0 ? (exchangeRate !== '' && parsedRate > 0) : true;
 
   const totalDepositUSD = parsedUSD + (parsedBS / parsedRate);
-  const remainingBalance = Math.max(0, parsedTotalCost - totalDepositUSD);
+  const remainingBalance = parsedTotalCost - totalDepositUSD;
 
   // The 20% rule
-  const minRequiredDeposit = parsedTotalCost * 0.2;
+  const minRequiredDeposit = parsedTotalCost * 0.20;
   const hasMet20Percent = totalDepositUSD >= minRequiredDeposit;
   const showTrustedToggle = parsedTotalCost > 0 && !hasMet20Percent;
+  
+  // Bug fix: If trusted client is checked, bypass the 20% requirement.
   const isFormValidFinancially = isCostValid && isRateValid && (hasMet20Percent || isTrustedClient);
 
   // Action: Generate ICS File
@@ -463,7 +465,7 @@ END:VCALENDAR`;
               <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                 <span className="text-sm font-semibold text-slate-600">Resta por Cobrar ($)</span>
                 <span className={`text-lg font-bold font-mono ${remainingBalance <= 0 && parsedTotalCost > 0 ? 'text-green-600' : 'text-brand-orange'}`}>
-                  ${remainingBalance > 0 ? remainingBalance.toFixed(2) : '0.00'}
+                  ${remainingBalance.toFixed(2)}
                 </span>
               </div>
 
