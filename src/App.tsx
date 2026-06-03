@@ -366,6 +366,25 @@ export default function App() {
                           <div className="space-y-4">
                             {dayEvents.map((evt, idx) => {
                               const room = ROOMS.find(r => r.id === evt.roomId);
+                              
+                              const total = evt.totalCost || 0;
+                              const dUSD = evt.depositUSD || 0;
+                              const rate = evt.exchangeRate || 1;
+                              const dBS = evt.depositBS ? (evt.depositBS / rate) : 0;
+                              const remaining = total - (dUSD + dBS);
+                              const totalPaid = dUSD + dBS;
+                              
+                              let paymentBadge = null;
+                              if (total > 0) {
+                                if (totalPaid === 0) {
+                                  paymentBadge = <div className="flex items-center text-[10px] sm:text-xs font-medium bg-red-50 text-red-600 px-2.5 py-1 rounded-lg border border-red-200 gap-1.5 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Deuda Total</div>;
+                                } else if (remaining > 0) {
+                                  paymentBadge = <div className="flex items-center text-[10px] sm:text-xs font-medium bg-yellow-50 text-yellow-700 px-2.5 py-1 rounded-lg border border-yellow-200 gap-1.5 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Abonado (Resta ${remaining.toFixed(2)})</div>;
+                                } else {
+                                  paymentBadge = <div className="flex items-center text-[10px] sm:text-xs font-medium bg-green-50 text-green-700 px-2.5 py-1 rounded-lg border border-green-200 gap-1.5 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Pagado Total</div>;
+                                }
+                              }
+
                               return (
                                 <motion.div 
                                   key={evt.id}
@@ -379,13 +398,16 @@ export default function App() {
                                 >
                                   <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: usersConfig[evt.createdBy] || '#182865' }} />
                                   
-                                  <div className="flex justify-between items-start mb-1.5 pl-2">
-                                    <h4 className="text-base font-bold text-brand-blue leading-tight">
+                                  <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
+                                    <h4 className="text-base font-bold text-brand-blue leading-tight min-w-0 pr-2">
                                       {evt.eventName}
                                     </h4>
-                                    <div className="flex items-center text-xs font-medium bg-brand-orange/10 text-[#CC7604] px-2.5 py-1 rounded-lg border border-brand-orange/20">
-                                      <Clock size={12} className="mr-1.5 text-brand-orange/70" />
-                                      {evt.startTime} - {evt.endTime}
+                                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                      <div className="flex items-center text-[10px] sm:text-xs font-medium bg-brand-orange/10 text-[#CC7604] px-2.5 py-1 rounded-lg border border-brand-orange/20">
+                                        <Clock size={12} className="mr-1.5 text-brand-orange/70" />
+                                        {evt.startTime} - {evt.endTime}
+                                      </div>
+                                      {paymentBadge}
                                     </div>
                                   </div>
                                   

@@ -24,7 +24,12 @@ export interface EventData {
   endTime: string;
   resources: EventResource; 
   notes?: string;
-  roomLayout: RoomLayout; 
+  roomLayout: RoomLayout;
+  totalCost?: number;
+  depositUSD?: number;
+  depositBS?: number;
+  exchangeRate?: number;
+  isTrustedClient?: boolean;
   createdBy: string; 
   createdBy_Name?: string; 
   createdBy_Color?: string; 

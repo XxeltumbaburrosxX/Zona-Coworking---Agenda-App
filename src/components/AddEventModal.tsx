@@ -61,6 +61,27 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent }: Props)
     tv: editingEvent?.resources?.tv ?? false,
   });
 
+  // --- FINANZAS / PAGOS ---
+  const [totalCost, setTotalCost] = useState<number | ''>(editingEvent?.totalCost ?? '');
+  const [depositUSD, setDepositUSD] = useState<number | ''>(editingEvent?.depositUSD ?? '');
+  const [depositBS, setDepositBS] = useState<number | ''>(editingEvent?.depositBS ?? '');
+  const [exchangeRate, setExchangeRate] = useState<number | ''>(editingEvent?.exchangeRate ?? '');
+  const [isTrustedClient, setIsTrustedClient] = useState<boolean>(editingEvent?.isTrustedClient ?? false);
+
+  const parsedTotalCost = Number(totalCost) || 0;
+  const parsedUSD = Number(depositUSD) || 0;
+  const parsedBS = Number(depositBS) || 0;
+  const parsedRate = Number(exchangeRate) || 1;
+
+  const totalDepositUSD = parsedUSD + (parsedBS / parsedRate);
+  const remainingBalance = parsedTotalCost - totalDepositUSD;
+
+  // The 20% rule
+  const minRequiredDeposit = parsedTotalCost * 0.2;
+  const hasMet20Percent = totalDepositUSD >= minRequiredDeposit;
+  const showTrustedToggle = parsedTotalCost > 0 && !hasMet20Percent;
+  const isFormValidFinancially = parsedTotalCost === 0 || hasMet20Percent || isTrustedClient;
+
   // Action: Generate ICS File
   const generateICS = () => {
     if (!date || !startTime || !endTime || !eventName) return;
@@ -199,6 +220,11 @@ END:VCALENDAR`;
         roomLayout: (roomLayout === 'Otro' && customRoomLayout ? customRoomLayout : roomLayout) as RoomLayout,
         resources,
         notes,
+        totalCost: totalCost === '' ? undefined : Number(totalCost),
+        depositUSD: depositUSD === '' ? undefined : Number(depositUSD),
+        depositBS: depositBS === '' ? undefined : Number(depositBS),
+        exchangeRate: exchangeRate === '' ? undefined : Number(exchangeRate),
+        isTrustedClient,
         createdBy: auth.currentUser.uid,
         createdBy_Name: auth.currentUser.displayName ?? auth.currentUser.email ?? 'Staff',
         createdAt: editingEvent?.createdAt ?? Date.now()
@@ -406,6 +432,53 @@ END:VCALENDAR`;
             </div>
 
             <div className="pt-4 border-t border-slate-100">
+              <h3 className="text-base font-display font-bold text-brand-blue mb-4">Control de Pagos</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 relative">
+                  <label className="text-sm font-semibold text-slate-600">Costo Total ($)</label>
+                  <input type="number" min="0" step="0.01" value={totalCost} onChange={e => setTotalCost(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                    className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="0.00" />
+                </div>
+                <div className="space-y-1.5 relative">
+                  <label className="text-sm font-semibold text-slate-600">Abono en Divisas ($)</label>
+                  <input type="number" min="0" step="0.01" value={depositUSD} onChange={e => setDepositUSD(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                    className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="0.00" />
+                </div>
+                <div className="space-y-1.5 relative">
+                  <label className="text-sm font-semibold text-slate-600">Abono en Bolívares (Bs)</label>
+                  <input type="number" min="0" step="0.01" value={depositBS} onChange={e => setDepositBS(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                    className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="0.00" />
+                </div>
+                <div className="space-y-1.5 relative">
+                  <label className="text-sm font-semibold text-slate-600">Tasa de Cambio (Bs/$)</label>
+                  <input type="number" min="0" step="0.01" value={exchangeRate} onChange={e => setExchangeRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                    className="w-full px-4 py-3 h-12 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-blue/20 transition-all font-mono" placeholder="40.00" />
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-600">Resta por Cobrar ($)</span>
+                <span className={`text-lg font-bold font-mono ${remainingBalance <= 0 && parsedTotalCost > 0 ? 'text-green-600' : 'text-brand-orange'}`}>
+                  ${remainingBalance > 0 ? remainingBalance.toFixed(2) : '0.00'}
+                </span>
+              </div>
+
+              {showTrustedToggle && (
+                <div className="mt-4 flex items-center justify-between p-3 rounded-xl bg-brand-orange/5 border border-brand-orange/20 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-brand-orange">¿Marcar como Cliente de Confianza?</span>
+                    <span className="text-xs text-brand-orange/80">Permite guardar sin el abono del 20% (${minRequiredDeposit.toFixed(2)}) requerido.</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer min-h-[44px] min-w-[44px] justify-end">
+                    <input type="checkbox" className="sr-only peer" checked={isTrustedClient} onChange={(e) => setIsTrustedClient(e.target.checked)} />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[12px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-orange"></div>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowSetup(!showSetup)}
@@ -452,7 +525,7 @@ END:VCALENDAR`;
             <button type="button" onClick={handleClose} className="w-full sm:w-auto px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors bg-white sm:bg-slate-100 border border-slate-200 sm:border-transparent shadow-sm sm:shadow-none">
               Cancelar
             </button>
-            <button type="submit" form="reservation-form" disabled={loading} className="w-full flex-1 sm:flex-none sm:w-auto justify-center px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-white bg-brand-orange hover:bg-[#E68505] shadow-md shadow-orange-500/20 transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2">
+            <button type="submit" form="reservation-form" disabled={loading || !isFormValidFinancially} className="w-full flex-1 sm:flex-none sm:w-auto justify-center px-6 py-3 h-12 min-h-[44px] rounded-xl text-sm font-bold text-white bg-brand-orange hover:bg-[#E68505] shadow-md shadow-orange-500/20 transition-all disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2">
               {loading ? 'Guardando...' : 'Guardar y Confirmar'}
             </button>
           </div>

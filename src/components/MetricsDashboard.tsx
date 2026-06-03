@@ -71,6 +71,20 @@ export function MetricsDashboard({ events }: Props) {
 
   const handleShare = () => {
     const todayStr = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    const todayISO = new Date().toLocaleDateString('en-CA'); // Gets YYYY-MM-DD local time
+    
+    // Check pending balance for today's events ONLY
+    const todaysEvents = events.filter(e => e.date === todayISO);
+    let totalPorCobrar = 0;
+    todaysEvents.forEach(e => {
+      const total = e.totalCost || 0;
+      const dUSD = e.depositUSD || 0;
+      const rate = e.exchangeRate || 1;
+      const dBS = e.depositBS ? (e.depositBS / rate) : 0;
+      const remain = total - (dUSD + dBS);
+      if (remain > 0) totalPorCobrar += remain;
+    });
+
     const text = `📊 *Reporte de Gestión - Zona Coworking*
 🗓 Periodo: Rango de 30 días (Paso y Futuro) (${todayStr})
 
@@ -78,7 +92,8 @@ export function MetricsDashboard({ events }: Props) {
 ✅ *Reservas totales:* ${metrics.monthlyCount}
 👥 *Asistencia total est.:* ${metrics.totalAttendees} personas
 
-💡 _Nota: Reporte de analíticas autogenerado para el equipo operativo._`;
+💡 _Nota: Reporte de analíticas autogenerado para el equipo operativo._
+💰 Total por cobrar hoy: $${totalPorCobrar.toFixed(2)}`;
 
     const encodedText = encodeURIComponent(text);
     window.open(`https://wa.me/?text=${encodedText}`, '_blank');
