@@ -2,21 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, Plus, PieChart, Share, 
-  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Hash, Settings
+  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Hash, Settings, Sparkles, HelpCircle, RotateCcw, Check, Lock, User as UserIcon
 } from 'lucide-react';
 import { db, auth } from './firebase';
-import { collection, onSnapshot, query, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-import { EventData, ROOMS, LOGO_COLOR } from './types';
+import { EventData, ROOMS, LOGO_COLOR, getRoomForEvent, AgendaItemType, ADMIN_EMAIL } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { ColorSelectionScreen } from './components/ColorSelectionScreen';
 import { CalendarGrid } from './components/CalendarGrid';
 import { AddEventModal } from './components/AddEventModal';
+import { NewItemSelector } from './components/NewItemSelector';
 import { MetricsDashboard } from './components/MetricsDashboard';
 import { NextEventCounter } from './components/NextEventCounter';
+import { PendingPreReservationsNotice } from './components/PendingPreReservationsNotice';
+import { PendingPaymentsNotice } from './components/PendingPaymentsNotice';
 import { InstallPWABanner } from './components/InstallPWABanner';
 import { UserProfileModal } from './components/UserProfileModal';
+import { TutorialModal } from './components/TutorialModal';
 
 // A beautifully minimal layout
 export default function App() {
@@ -35,18 +39,70 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState<string>(new Date().toISOString().split('T')[0]);
   const [activeMenu, setActiveMenu] = useState<'agenda' | 'metrics'>('agenda');
+  const isAdmin = user?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
+
+  useEffect(() => {
+    if (!isAdmin && activeMenu === 'metrics') {
+      setActiveMenu('agenda');
+    }
+  }, [isAdmin, activeMenu]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [initialItemType, setInitialItemType] = useState<AgendaItemType>('reserva');
   const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedRoomFilter, setSelectedRoomFilter] = useState<string>('Todos');
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  const handleSelectNewItemType = (type: AgendaItemType) => {
+    setIsSelectorOpen(false);
+    setInitialItemType(type);
+    setEditingEvent(null);
+    setIsModalOpen(true);
+  };
+
+  const handleToggleReminder = async (e: React.MouseEvent, evt: EventData) => {
+    e.stopPropagation();
+    if (!db) return;
+    const newCompleted = !evt.isCompleted;
+    try {
+      await updateDoc(doc(db, 'events', evt.id), {
+        isCompleted: newCompleted,
+        completedAt: newCompleted ? Date.now() : null
+      });
+    } catch (err) {
+      console.error('Error toggling reminder status:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!authInitialized || !user) return;
+    const key = `tutorial_general_seen_${user.uid}`;
+    try {
+      const hasSeen = localStorage.getItem(key);
+      if (!hasSeen) {
+        setIsTutorialOpen(true);
+      }
+    } catch {
+      // storage fallback
+    }
+  }, [authInitialized, user]);
 
   const filterRoomsMap = [
     { label: 'Todos', ids: [] },
+    { label: 'Planta Baja', ids: ['1', '2', '3', '4'] },
+    { label: 'Mezzanina', ids: ['5', '6', '7', '8', '9', '10'] },
     { label: 'Río Morichal', ids: ['1'] },
-    { label: 'Cocina de Ríos', ids: ['2'] },
-    { label: 'Río Amana', ids: ['3'] },
-    { label: 'Río Guarapiche 1 y 2', ids: ['4', '5'] },
-    { label: 'Río San Juan', ids: ['6'] },
+    { label: 'Río Guanipa', ids: ['2'] },
+    { label: 'Río Tigre', ids: ['3'] },
+    { label: 'Cocina de Ríos', ids: ['4'] },
+    { label: 'Río San Juan', ids: ['5'] },
+    { label: 'Río Caripe', ids: ['6'] },
+    { label: 'Río Amana', ids: ['7'] },
+    { label: 'Río Guarapiche II', ids: ['8'] },
+    { label: 'Río Mapirito', ids: ['9'] },
+    { label: 'Río Guarapiche I', ids: ['10'] },
   ];
 
   useEffect(() => {
@@ -122,13 +178,15 @@ export default function App() {
   
   const filteredEvents = events.filter(e => {
     if (selectedRoomFilter === 'Todos') return true;
-    return activeFilterInfo?.ids.includes(e.roomId);
+    const room = getRoomForEvent(e);
+    if (!room) return false;
+    return activeFilterInfo?.ids.includes(room.id);
   });
 
   // Derived state for selected day
   const dayEvents = filteredEvents
     .filter(e => e.date === selectedDateStr)
-    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
   const formattedSelectedDate = new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { 
     weekday: 'long', day: 'numeric', month: 'long' 
@@ -166,6 +224,18 @@ export default function App() {
           </div>
         )}
 
+      <TutorialModal 
+        isOpen={isTutorialOpen} 
+        onClose={() => setIsTutorialOpen(false)} 
+        userId={user?.uid}
+      />
+
+      <NewItemSelector
+        isOpen={isSelectorOpen}
+        onClose={() => setIsSelectorOpen(false)}
+        onSelect={handleSelectNewItemType}
+      />
+
       {isModalOpen && <AddEventModal 
         onClose={() => {
           setIsModalOpen(false);
@@ -173,6 +243,8 @@ export default function App() {
         }} 
         selectedDateStr={selectedDateStr}
         editingEvent={editingEvent}
+        initialItemType={initialItemType}
+        usersProfile={usersProfile}
       />}
       
       {/* 1. Left Sidebar Navigation - Minimal & Elegant */}
@@ -192,16 +264,18 @@ export default function App() {
               <CalendarIcon size={18} /> Resumen de Agenda
             </button>
 
-            <button 
-              onClick={() => setActiveMenu('metrics')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium ${
-                activeMenu === 'metrics' 
-                  ? 'bg-brand-blue text-white shadow-sm' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue'
-              }`}
-            >
-              <PieChart size={18} /> Métricas y Reportes
-            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setActiveMenu('metrics')}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium ${
+                  activeMenu === 'metrics' 
+                    ? 'bg-brand-blue text-white shadow-sm' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-brand-blue'
+                }`}
+              >
+                <PieChart size={18} /> Métricas y Reportes
+              </button>
+            )}
           </nav>
         </div>
 
@@ -271,19 +345,57 @@ export default function App() {
             <div className="w-full">
               {activeMenu === 'agenda' && (
                 <>
-                  <header className="mb-8 mt-2 flex justify-between items-end px-4 md:px-0">
+                  <header className="mb-6 mt-2 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 px-4 md:px-0">
                     <div>
-                      <h1 className="text-3xl font-display font-bold text-brand-blue tracking-tight">Hub de Reservas</h1>
-                      <p className="text-[#6b7280] mt-1">Coordinación de actividades y ocupación en tiempo real</p>
+                      <div className="flex items-center justify-between sm:justify-start gap-2">
+                        <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-blue tracking-tight">Hub de Reservas</h1>
+                        <button
+                          onClick={() => setIsTutorialOpen(true)}
+                          className="md:hidden flex items-center gap-1.5 bg-blue-50 text-brand-blue border border-blue-200/80 px-2.5 py-1 rounded-lg font-bold text-[11px] hover:bg-blue-100 transition-colors cursor-pointer"
+                          title="Ver guía de novedades"
+                        >
+                          <Sparkles size={13} className="text-brand-orange" />
+                          <span>Novedades</span>
+                        </button>
+                      </div>
+                      <p className="text-[#6b7280] text-xs md:text-sm mt-1">Coordinación de actividades y ocupación en tiempo real</p>
                     </div>
-                    <button 
-                      onClick={() => setIsModalOpen(true)}
-                      className="hidden md:flex items-center gap-2 bg-brand-orange text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#E68505] transition-colors shadow-sm shadow-orange-500/20"
-                    >
-                      <Plus size={16} /> Nueva Reserva
-                    </button>
+                    <div className="hidden md:flex items-center gap-3">
+                      <button
+                        onClick={() => setIsTutorialOpen(true)}
+                        className="flex items-center gap-2 bg-blue-50 text-brand-blue border border-blue-200/80 px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-blue-100/80 transition-colors cursor-pointer"
+                        title="Ver guía de novedades"
+                      >
+                        <Sparkles size={15} className="text-brand-orange" />
+                        <span>Novedades y Guía</span>
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setIsSelectorOpen(true);
+                        }}
+                        className="flex items-center gap-2 bg-brand-orange text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#E68505] transition-colors shadow-sm shadow-orange-500/20 cursor-pointer"
+                      >
+                        <Plus size={16} /> Agendar
+                      </button>
+                    </div>
                   </header>
                   <div className="px-4 md:px-0">
+                    <PendingPaymentsNotice
+                      events={events}
+                      currentUser={user}
+                      usersProfile={usersProfile}
+                      onSelectEvent={(evt) => {
+                        setEditingEvent(evt);
+                        setIsModalOpen(true);
+                      }}
+                    />
+                    <PendingPreReservationsNotice 
+                      events={events}
+                      onSelectEvent={(evt) => {
+                        setEditingEvent(evt);
+                        setIsModalOpen(true);
+                      }}
+                    />
                     <NextEventCounter events={events} isLoading={isEventsLoading} />
                   </div>
                 </>
@@ -365,7 +477,7 @@ export default function App() {
                         ) : (
                           <div className="space-y-4">
                             {dayEvents.map((evt, idx) => {
-                              const room = ROOMS.find(r => r.id === evt.roomId);
+                              const room = getRoomForEvent(evt);
                               
                               const total = evt.totalCost || 0;
                               const dUSD = evt.depositUSD || 0;
@@ -383,6 +495,136 @@ export default function App() {
                                 } else {
                                   paymentBadge = <div className="flex items-center text-[10px] sm:text-xs font-medium bg-green-50 text-green-700 px-2.5 py-1 rounded-lg border border-green-200 gap-1.5 shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Pagado Total</div>;
                                 }
+                              }
+
+                              if (evt.itemType === 'recordatorio') {
+                                const isDone = !!evt.isCompleted;
+                                return (
+                                  <motion.div 
+                                    key={evt.id}
+                                    onClick={() => {
+                                      setEditingEvent(evt);
+                                      setIsModalOpen(true);
+                                    }}
+                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50, scale: 0.95, transition: { duration: 0.2 } }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    className={`group bg-white border ${isDone ? 'border-emerald-200/80 hover:border-emerald-400 bg-slate-50/50' : 'border-amber-200/80 hover:border-amber-400'} rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden`}
+                                  >
+                                    <div className={`absolute top-0 left-0 bottom-0 w-1.5 ${isDone ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                    
+                                    <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
+                                      <div className="flex items-start gap-2.5 min-w-0 pr-2">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleToggleReminder(e, evt)}
+                                          className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                                            isDone
+                                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                                              : 'border-amber-400 bg-white hover:bg-amber-50 text-transparent'
+                                          }`}
+                                          title={isDone ? 'Marcar como pendiente' : 'Marcar como completado'}
+                                        >
+                                          <Check size={13} strokeWidth={3} className={isDone ? 'block' : 'hidden'} />
+                                        </button>
+                                        <h4 className={`text-base font-bold leading-tight min-w-0 ${
+                                          isDone ? 'text-slate-400 line-through font-normal' : 'text-slate-800'
+                                        }`}>
+                                          {evt.eventName}
+                                        </h4>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                        <div className={`flex items-center text-[10px] sm:text-xs font-bold px-2.5 py-1 rounded-lg border gap-1.5 shrink-0 ${
+                                          isDone
+                                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                            : 'bg-amber-50 text-amber-900 border-amber-300'
+                                        }`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${isDone ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                          <span>{isDone ? 'Completado' : 'Recordatorio'}</span>
+                                        </div>
+                                        {evt.startTime ? (
+                                          <div className="flex items-center text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
+                                            <Clock size={11} className="mr-1 text-slate-500" />
+                                            {evt.startTime}
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg">
+                                            Todo el día
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <p className={`text-sm mb-4 pl-2 font-medium ${isDone ? 'text-slate-400' : 'text-slate-500'}`}>
+                                      {evt.assignedTo ? `Responsable: ${evt.assignedTo}` : (evt.notes ? evt.notes : 'Nota interna')}
+                                    </p>
+                                    
+                                    <div className="flex flex-wrap items-center gap-4 pl-2 pt-3.5 border-t border-slate-50 text-xs font-medium text-slate-400">
+                                      <div className={`flex items-center gap-1 font-semibold ${isDone ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                        <span>{isDone ? '✓ Tarea completada' : '📌 Tarea interna'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 ml-auto">
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: usersConfig[evt.createdBy] || (isDone ? '#10B981' : '#F59E0B') }} title={evt.createdBy_Name}></span>
+                                        <span className="text-[10px] uppercase text-slate-400">{evt.createdBy_Name?.split(' ')[0] || 'Staff'}</span>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              }
+
+                              if (evt.itemType === 'reunion') {
+                                return (
+                                  <motion.div 
+                                    key={evt.id}
+                                    onClick={() => {
+                                      setEditingEvent(evt);
+                                      setIsModalOpen(true);
+                                    }}
+                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -50, scale: 0.95, transition: { duration: 0.2 } }}
+                                    transition={{ delay: idx * 0.05 }}
+                                    className="group bg-white border border-purple-200/80 hover:border-purple-400 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                                  >
+                                    <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-purple-600" />
+                                    
+                                    <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
+                                      <h4 className="text-base font-bold text-purple-950 leading-tight min-w-0 pr-2">
+                                        {evt.eventName}
+                                      </h4>
+                                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                        <div className="flex items-center text-[10px] sm:text-xs font-bold bg-purple-50 text-purple-900 px-2.5 py-1 rounded-lg border border-purple-200 gap-1.5 shrink-0">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                                          <span>Reunión</span>
+                                        </div>
+                                        <div className="flex items-center text-[10px] sm:text-xs font-medium bg-purple-50 text-purple-800 px-2.5 py-1 rounded-lg border border-purple-200/60">
+                                          <Clock size={11} className="mr-1.5 text-purple-600" />
+                                          {evt.startTime} - {evt.endTime}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <p className="text-sm text-slate-500 mb-4 pl-2 font-medium">
+                                      {evt.clientName ? `Con: ${evt.clientName}` : (evt.notes ? evt.notes : 'Reunión de coordinación')}
+                                    </p>
+                                    
+                                    <div className="flex flex-wrap items-center gap-4 pl-2 pt-3.5 border-t border-slate-50 text-xs font-medium text-slate-500">
+                                      <div className="flex items-center gap-1.5">
+                                        <MapPin size={14} className="text-purple-400" />
+                                        <span style={{ color: room ? room.dotColor : '#7E22CE' }}>
+                                          {room ? room.name : 'Virtual / Sin salón'}
+                                        </span>
+                                      </div>
+                                      {evt.attendees && (
+                                        <div className="flex items-center gap-1.5">
+                                          <Users size={14} className="text-slate-400" />
+                                          <span>{evt.attendees} pers</span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-1.5 ml-auto">
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: usersConfig[evt.createdBy] || '#8B5CF6' }} title={evt.createdBy_Name}></span>
+                                        <span className="text-[10px] uppercase text-slate-400">{evt.createdBy_Name?.split(' ')[0] || 'Staff'}</span>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
                               }
 
                               return (
@@ -407,6 +649,18 @@ export default function App() {
                                         <Clock size={12} className="mr-1.5 text-brand-orange/70" />
                                         {evt.startTime} - {evt.endTime}
                                       </div>
+                                      {evt.reservationStatus === 'Pre-reserva' && (
+                                        <div className="flex items-center text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-300/80 gap-1.5 shrink-0">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                          <span>Pre-reserva</span>
+                                        </div>
+                                      )}
+                                      {evt.isRescheduled && (
+                                        <div className="flex items-center text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-800 px-2 py-0.5 rounded-lg border border-amber-200/80 gap-1 shrink-0" title={evt.originalDate ? `Fecha original: ${evt.originalDate}` : 'Evento reprogramado'}>
+                                          <RotateCcw size={11} className="text-amber-600 shrink-0" />
+                                          <span>🔄 Reprogramada</span>
+                                        </div>
+                                      )}
                                       {paymentBadge}
                                     </div>
                                   </div>
@@ -439,7 +693,7 @@ export default function App() {
                       </AnimatePresence>
                     </div>
                   </motion.div>
-                ) : (
+                ) : (isAdmin && (
                   <motion.div 
                     key="metrics"
                     initial={{ opacity: 0, y: 15 }}
@@ -448,9 +702,9 @@ export default function App() {
                     transition={{ duration: 0.25, ease: "easeInOut" }}
                     className="w-full px-4 md:px-0"
                   >
-                    <MetricsDashboard events={events} />
+                    <MetricsDashboard events={events} currentUserEmail={user?.email} usersProfile={usersProfile} />
                   </motion.div>
-                )}
+                ))}
               </AnimatePresence>
             </div>
         </div>
@@ -468,20 +722,32 @@ export default function App() {
         
         <div className="mobile-fab-wrapper flex-1">
           <button 
-            onClick={() => setIsModalOpen(true)}
-            className="mobile-fab w-14 h-14 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 border-[6px] border-white hover:scale-105 transition-transform"
+            onClick={() => {
+              setIsSelectorOpen(true);
+            }}
+            className="mobile-fab w-14 h-14 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 border-[6px] border-white hover:scale-105 transition-transform cursor-pointer"
           >
             <Plus size={24} />
           </button>
         </div>
 
-        <button 
-          onClick={() => setActiveMenu('metrics')}
-          className={`flex flex-col items-center gap-1 py-1 flex-1 ${activeMenu === 'metrics' ? 'text-brand-blue' : 'text-slate-400'}`}
-        >
-          <PieChart size={24} className={activeMenu === 'metrics' ? 'fill-brand-blue/10' : ''} />
-          <span className="text-[10px] font-semibold">Métricas</span>
-        </button>
+        {isAdmin ? (
+          <button 
+            onClick={() => setActiveMenu('metrics')}
+            className={`flex flex-col items-center gap-1 py-1 flex-1 ${activeMenu === 'metrics' ? 'text-brand-blue' : 'text-slate-400'}`}
+          >
+            <PieChart size={24} className={activeMenu === 'metrics' ? 'fill-brand-blue/10' : ''} />
+            <span className="text-[10px] font-semibold">Métricas</span>
+          </button>
+        ) : (
+          <button 
+            onClick={() => setIsProfileModalOpen(true)}
+            className="flex flex-col items-center gap-1 py-1 flex-1 text-slate-400 hover:text-brand-blue transition-colors cursor-pointer"
+          >
+            <UserIcon size={24} />
+            <span className="text-[10px] font-semibold">Mi Perfil</span>
+          </button>
+        )}
       </div>
       
       {/* 4. Edit Profile Modal */}

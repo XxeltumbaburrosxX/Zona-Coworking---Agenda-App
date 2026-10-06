@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { EventData, ROOMS } from '../types';
+import { EventData, ROOMS, getRoomForEvent } from '../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
 
 interface CalendarGridProps {
@@ -62,11 +62,16 @@ export function CalendarGrid({ events, usersConfig, selectedDateStr, onSelectDat
           const isToday = new Date().toISOString().split('T')[0] === dateString;
           const isSelected = selectedDateStr === dateString;
 
-          const totalAttendees = dayEventsList.reduce((acc, e) => acc + (e.attendees || 0), 0);
+          const commercialDayEvents = dayEventsList.filter(e => !e.itemType || e.itemType === 'reserva');
+          const totalAttendees = commercialDayEvents.reduce((acc, e) => acc + (e.attendees || 0), 0);
           const showWarning = totalAttendees >= totalDailyCapacity * 0.8;
 
-          // Deduplicate users for dots
-          const dotColors = Array.from(new Set(dayEventsList.map(e => usersConfig[e.createdBy] || ROOMS.find(r => r.id === e.roomId)?.dotColor || '#182865'))).slice(0, 4);
+          // Deduplicate indicators for dots (Recordatorios: amarillo, Reuniones: violeta, Reservas: usuario o salón)
+          const dotColors = Array.from(new Set(dayEventsList.map(e => {
+            if (e.itemType === 'recordatorio') return '#EAB308';
+            if (e.itemType === 'reunion') return '#8B5CF6';
+            return usersConfig[e.createdBy] || getRoomForEvent(e)?.dotColor || '#182865';
+          }))).slice(0, 4);
 
           return (
             <button 

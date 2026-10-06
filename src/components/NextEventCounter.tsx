@@ -18,9 +18,10 @@ export function NextEventCounter({ events, isLoading }: Props) {
 
   const nextEvent = useMemo(() => {
     const upcomingEvents = events
+      .filter(e => (!e.itemType || e.itemType === 'reserva' || e.itemType === 'reunion') && e.startTime && e.startTime.includes(':') && e.date)
       .map(event => {
         const [year, month, day] = event.date.split('-').map(Number);
-        const [hours, minutes] = event.startTime.split(':').map(Number);
+        const [hours, minutes] = (event.startTime || '00:00').split(':').map(Number);
         const eventDate = new Date(year, month - 1, day, hours, minutes);
         return { ...event, eventDate };
       })

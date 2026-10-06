@@ -47,7 +47,7 @@
     bottom: 0;
     left: 0;
     width: 100%;
-    z-index: 9999;
+    z-index: 40;
     background-color: white;
     border-top: 1px solid #f1f5f9;
     display: flex;
@@ -69,7 +69,7 @@
     left: 50%;
     transform: translateX(-50%);
     bottom: 10px;
-    z-index: 10000;
+    z-index: 45;
   }
 }
 
@@ -140,4 +140,13 @@
   .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
   }
+}
+
+/* SweetAlert2 Overlay & Dialog Layer Priority */
+.swal2-container {
+  z-index: 1000000 !important;
+}
+
+.swal2-popup {
+  max-width: 92vw !important;
 }
