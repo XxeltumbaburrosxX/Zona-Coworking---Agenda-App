@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db, auth } from '../firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType } from '../types';
+import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType, ADMIN_EMAIL } from '../types';
 
 interface Props {
   onClose: () => void;
@@ -61,6 +61,13 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
   const [showSetup, setShowSetup] = useState(window.innerWidth >= 768);
   const [isClosing, setIsClosing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  const isJuanAdmin = useMemo(() => {
+    const email = (auth?.currentUser?.email || '').toLowerCase().trim();
+    const username = email.split('@')[0];
+    const name = (auth?.currentUser?.displayName || '').toLowerCase().trim();
+    return email === ADMIN_EMAIL.toLowerCase() || username === 'juan' || username.startsWith('juan.') || username.startsWith('juan_') || name === 'juan' || name === 'juan medina';
+  }, []);
 
   useEffect(() => {
     // Small delay to ensure the DOM is painted and CSS transition is triggered
@@ -375,8 +382,16 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
     date: editingEvent?.date ?? '',
     startTime: editingEvent?.startTime ?? '',
     endTime: editingEvent?.endTime ?? '',
-    roomLayout: editingEvent?.roomLayout ?? '',
-    resources: editingEvent?.resources ? { ...editingEvent.resources } : { tv: false },
+    roomLayout: (() => {
+      const layout = editingEvent?.roomLayout as string | undefined;
+      if (!layout) return '';
+      if (layout === 'School') return 'Escuela';
+      if (layout === 'Theater') return 'Auditorio';
+      if (layout === 'U-Shape') return 'Mesa en U';
+      if (layout === 'Boardroom') return 'Directorio';
+      return layout as RoomLayout;
+    })(),
+    resources: editingEvent?.resources ? { ...editingEvent.resources } : { tv: false, water: false, coffee: false, napkins: false },
     notes: editingEvent?.notes ?? '',
     totalCost: editingEvent?.totalCost !== undefined && editingEvent?.totalCost !== null ? editingEvent.totalCost : '',
     depositUSD: editingEvent?.depositUSD !== undefined && editingEvent?.depositUSD !== null ? editingEvent.depositUSD : '',
@@ -384,7 +399,6 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
     exchangeRate: editingEvent?.exchangeRate !== undefined && editingEvent?.exchangeRate !== null ? editingEvent.exchangeRate : '',
     isTrustedClient: Boolean(editingEvent?.isTrustedClient),
     reservationStatus: editingEvent?.reservationStatus ?? 'Confirmada',
-    salesRep: editingEvent?.salesRep ?? '',
     assignedTo: editingEvent?.assignedTo ?? '',
     isReminderCompleted: Boolean(editingEvent?.isCompleted)
   });
@@ -392,12 +406,13 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
   const isDirty = useMemo(() => {
     const init = initialStateRef.current;
     if (!editingEvent) {
+      // User is creating a brand new item.
+      // Only consider it dirty if the user actually typed or filled in meaningful information!
       if (eventName.trim() !== '') return true;
       if (clientName.trim() !== '') return true;
       if (clientPhone.trim() !== '') return true;
       if (notes.trim() !== '') return true;
       if (assignedTo.trim() !== '') return true;
-      if (salesRep.trim() !== '') return true;
       if (attendees !== '' && attendees !== 0) return true;
       if (totalCost !== '' && totalCost !== 0) return true;
       if (depositUSD !== '' && depositUSD !== 0) return true;
@@ -406,6 +421,12 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
       if (customType.trim() !== '') return true;
       if (customRoomLayout.trim() !== '') return true;
       if (resources.tv !== false) return true;
+      if (roomId !== '') return true;
+      if (type !== '') return true;
+      if (date !== '') return true;
+      if (startTime !== '' || endTime !== '') return true;
+      if (roomLayout !== '') return true;
+      if (isTrustedClient) return true;
       return false;
     }
 
@@ -441,7 +462,6 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
     if (roomLayout !== init.roomLayout) return true;
     if (customRoomLayout.trim() !== '') return true;
     if (reservationStatus !== init.reservationStatus) return true;
-    if ((salesRep || '') !== (init.salesRep || '')) return true;
     if (Boolean(isTrustedClient) !== Boolean(init.isTrustedClient)) return true;
 
     const curTotal = totalCost === '' ? 0 : Number(totalCost);
@@ -467,7 +487,7 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
     editingEvent, itemType, eventName, clientName, clientPhone, type, customType,
     roomId, attendees, date, startTime, endTime, roomLayout, customRoomLayout,
     resources, notes, totalCost, depositUSD, depositBS, exchangeRate, isTrustedClient,
-    reservationStatus, salesRep, assignedTo, isReminderCompleted, additionalDates
+    reservationStatus, assignedTo, isReminderCompleted, additionalDates
   ]);
 
   const handleRequestClose = () => {
@@ -477,6 +497,25 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
       handleClose();
     }
   };
+
+  // Keyboard shortcut: close modal or warning on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showUnsavedWarningModal) {
+          setShowUnsavedWarningModal(false);
+        } else if (showSaveConfirmModal) {
+          setShowSaveConfirmModal(false);
+        } else if (showMarkPaidConfirmModal) {
+          setShowMarkPaidConfirmModal(false);
+        } else {
+          handleRequestClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDirty, showUnsavedWarningModal, showSaveConfirmModal, showMarkPaidConfirmModal]);
 
   // Action: Generate ICS File
   const generateICS = () => {
@@ -1123,7 +1162,14 @@ END:VCALENDAR`;
 
   return (
     <>
-      <div className={`fixed inset-0 z-[99999] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ease-out ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0'}`}>
+      <div 
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleRequestClose();
+          }
+        }}
+        className={`fixed inset-0 z-[99999] flex flex-col items-center justify-end sm:justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ease-out ${isOpen && !isClosing ? 'opacity-100' : 'opacity-0'}`}
+      >
       <div 
         className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh] transition-transform duration-300 ease-out`}
         style={{ transform: (isOpen && !isClosing) ? 'translateY(0)' : 'translateY(100%)' }}
@@ -1160,14 +1206,19 @@ END:VCALENDAR`;
                 type="button" 
                 onClick={handleDelete} 
                 disabled={deleting}
-                className="p-2 sm:p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 border border-red-100 bg-red-50/20 sm:border-transparent sm:bg-transparent"
+                className="p-2 sm:p-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 active:scale-95 rounded-full transition-all min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 border border-red-100 bg-red-50/20 sm:border-transparent sm:bg-transparent"
                 title={`Eliminar ${itemType === 'recordatorio' ? 'Recordatorio' : itemType === 'reunion' ? 'Reunión' : 'Reserva'}`}
               >
                 <Trash2 size={18} />
                 <span className="text-xs font-bold sm:hidden pr-1">Eliminar</span>
               </button>
             )}
-            <button onClick={handleRequestClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer">
+            <button 
+              type="button"
+              onClick={handleRequestClose} 
+              aria-label="Cerrar modal"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:scale-95 rounded-full transition-all min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+            >
               <X size={20} />
             </button>
           </div>
@@ -1819,7 +1870,7 @@ END:VCALENDAR`;
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                   <UserCheck size={16} className="text-brand-blue" />
-                  <span>¿Quién consiguió la reserva? / Asesor comercial</span>
+                  <span>¿Quién consiguió la reserva? / Asesor</span>
                 </label>
                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                   salesRep.toLowerCase() === 'laura' || salesRep.toLowerCase() === 'yoanelis'
@@ -1828,46 +1879,50 @@ END:VCALENDAR`;
                     ? 'bg-blue-100 text-brand-blue border border-blue-200'
                     : 'bg-slate-200 text-slate-700'
                 }`}>
-                  {salesRep.toLowerCase() === 'laura' || salesRep.toLowerCase() === 'yoanelis' 
-                    ? `Comisión 25% (${salesRep})` 
-                    : salesRep.toLowerCase() === 'juan'
-                    ? 'Asesor: Juan (Directo / 0%)'
-                    : 'Directo / Sin comisión'}
+                  {isJuanAdmin ? (
+                    salesRep.toLowerCase() === 'laura' || salesRep.toLowerCase() === 'yoanelis' 
+                      ? `Asesor: ${salesRep} (Comisión 25%)` 
+                      : salesRep.toLowerCase() === 'juan'
+                      ? 'Asesor: Juan (Directo / 0%)'
+                      : 'Directo / Coworking (0%)'
+                  ) : (
+                    salesRep.toLowerCase() === 'laura' || salesRep.toLowerCase() === 'yoanelis' || salesRep.toLowerCase() === 'juan'
+                      ? `Asesor: ${salesRep}`
+                      : 'Directo / Espacio'
+                  )}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { id: 'Directo', label: 'Directo / Espacio', sub: 'Sin comisión' },
-                  { id: 'Juan', label: 'Juan', sub: 'Directo / 0%' },
-                  { id: 'Laura', label: 'Laura', sub: 'Comisión 25%' },
-                  { id: 'Yoanelis', label: 'Yoanelis', sub: 'Comisión 25%' },
-                  { id: 'Otro', label: 'Otro / Sin Asesor', sub: 'Sin comisión' },
+                  { id: 'Juan', label: 'Juan', sub: isJuanAdmin ? 'Directo (0%)' : null },
+                  { id: 'Laura', label: 'Laura', sub: isJuanAdmin ? 'Comisión (25%)' : null },
+                  { id: 'Yoanelis', label: 'Yoanelis', sub: isJuanAdmin ? 'Comisión (25%)' : null },
+                  { id: 'Directo', label: 'Directo', sub: isJuanAdmin ? 'Espacio (0%)' : 'Zona Coworking' },
                 ].map(opt => {
-                  const isSelected = (opt.id === 'Directo' && (!salesRep || salesRep.toLowerCase() === 'directo' || salesRep === 'Directo / Coworking')) || 
+                  const isSelected = (opt.id === 'Directo' && (!salesRep || salesRep.toLowerCase() === 'directo' || salesRep === 'Directo / Coworking' || salesRep.toLowerCase() === 'otro')) || 
                                     (opt.id !== 'Directo' && salesRep.toLowerCase() === opt.id.toLowerCase());
                   return (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setSalesRep(opt.id)}
-                      className={`min-h-[44px] px-2.5 py-2 rounded-xl text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      className={`min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-brand-blue text-white shadow-xs'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
-                      <span>{opt.label}</span>
-                      <span className={`text-[9px] font-medium ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
-                        {opt.sub}
-                      </span>
+                      <span className="text-[13px]">{opt.label}</span>
+                      {opt.sub && (
+                        <span className={`text-[9px] font-medium ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
+                          {opt.sub}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">
-                La comisión (25% sobre el costo total pactado para Laura y Yoanelis) se calculará y reflejará exclusivamente en los reportes privados del administrador.
-              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2436,7 +2491,12 @@ END:VCALENDAR`;
 
       {/* MODAL 1: Confirmación al Guardar Cambios */}
       {showSaveConfirmModal && (
-        <div className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSaveConfirmModal(false);
+          }}
+          className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
           <div className="bg-white w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl p-6 shadow-2xl border border-slate-100 font-sans space-y-4 animate-in zoom-in-95 duration-150">
             <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-2 sm:hidden" />
             <div className="flex items-start gap-3.5">
@@ -2478,7 +2538,12 @@ END:VCALENDAR`;
 
       {/* MODAL 2: Aviso al Cerrar con Cambios sin Guardar */}
       {showUnsavedWarningModal && (
-        <div className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowUnsavedWarningModal(false);
+          }}
+          className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
           <div className="bg-white w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl p-6 shadow-2xl border border-slate-100 font-sans space-y-4 animate-in zoom-in-95 duration-150">
             <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-2 sm:hidden" />
             <div className="flex items-start gap-3.5">
@@ -2529,7 +2594,12 @@ END:VCALENDAR`;
 
       {/* MODAL 3: Confirmación de Pago Completo */}
       {showMarkPaidConfirmModal && (
-        <div className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowMarkPaidConfirmModal(false);
+          }}
+          className="fixed inset-0 z-[100005] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
           <div className="bg-white w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl p-6 shadow-2xl border border-slate-100 font-sans space-y-4 animate-in zoom-in-95 duration-150">
             <div className="w-10 h-1 rounded-full bg-slate-200 mx-auto mb-2 sm:hidden" />
             <div className="flex items-start gap-3.5">
