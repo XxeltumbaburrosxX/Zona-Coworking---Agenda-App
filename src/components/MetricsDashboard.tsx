@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { EventData, ROOMS, getRoomForEvent, ADMIN_EMAIL } from '../types';
+import { EventData, ROOMS, getRoomForEvent, ADMIN_EMAIL, UserProfileEntry, isJuanUid } from '../types';
 import { 
   Calendar as CalendarIcon, Award, Share2, Users, Building2, 
   MapPin, TrendingUp, TrendingDown, ArrowRightLeft, 
@@ -15,7 +15,7 @@ import { MetricsTutorialModal } from './MetricsTutorialModal';
 interface Props {
   events: EventData[];
   currentUserEmail?: string | null;
-  usersProfile?: Record<string, { color?: string; displayName?: string; email?: string }>;
+  usersProfile?: Record<string, UserProfileEntry>;
 }
 
 const MONTH_NAMES = [
@@ -297,7 +297,10 @@ export function MetricsDashboard({ events, currentUserEmail, usersProfile }: Pro
       }
     }
 
-    // 2. Verified creator user profile (email and display name from Firebase Auth / users_config)
+    // 2. Verified creator user profile (email and display name from Firebase Auth / users_config, including linked old Juan UIDs)
+    if (evt.createdBy && isJuanUid(evt.createdBy, usersProfile)) {
+      return 'Juan';
+    }
     if (evt.createdBy && usersProfile && usersProfile[evt.createdBy]) {
       const prof = usersProfile[evt.createdBy];
       const pEmail = (prof.email || '').trim().toLowerCase();

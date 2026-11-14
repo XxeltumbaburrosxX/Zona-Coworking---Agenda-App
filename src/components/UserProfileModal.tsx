@@ -4,7 +4,7 @@ import { X, User, Mail, ShieldAlert, KeyRound, CheckCircle2, Lock, Palette } fro
 import { db, auth } from '../firebase';
 import { doc, updateDoc, collection, onSnapshot } from 'firebase/firestore';
 import { updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { COLOR_OPTIONS } from '../types';
+import { COLOR_OPTIONS, ADMIN_EMAIL, TECH_ADMIN_EMAIL, isJuanProfile } from '../types';
 import Swal from 'sweetalert2';
 
 interface UserProfileModalProps {
@@ -21,9 +21,13 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const [requireCurrentPassword, setRequireCurrentPassword] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [takenColors, setTakenColors] = useState<string[]>([]);
+  const [linkedOldUids, setLinkedOldUids] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const isAdmin = currentUser?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase();
+  const isCurrentUserJuan = isJuanProfile({ email: currentUser?.email || '', displayName: currentUser?.displayName || '' });
 
   // Fetch current user colors and configurations from firestore
   useEffect(() => {
@@ -33,24 +37,50 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     // Listen to firestore to fetch current identity colors and track taken colors
     const unsub = onSnapshot(collection(db, 'users_config'), (snapshot) => {
       const colors: string[] = [];
+      const others: Array<{ uid: string; displayName: string; email: string; color: string; isAutoJuan: boolean }> = [];
+      let ownLinkedUids: string[] = [];
+
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        const docEmail = data.email?.toLowerCase();
-        
+        const docEmail = (data.email || '').toLowerCase().trim();
         const isOwnDoc = docSnap.id === currentUser.uid;
-        const hasSameEmail = currentEmail && docEmail === currentEmail;
 
-        if (isOwnDoc || hasSameEmail) {
+        if (isOwnDoc) {
           if (data.color) setSelectedColor(data.color);
+          if (Array.isArray(data.linkedOldUids)) {
+            ownLinkedUids = data.linkedOldUids;
+          }
         } else {
-          if (data.color) colors.push(data.color.toUpperCase());
+          others.push({
+            uid: docSnap.id,
+            displayName: data.displayName || '',
+            email: docEmail,
+            color: data.color || '',
+            isAutoJuan: isJuanProfile({ email: data.email, displayName: data.displayName })
+          });
         }
       });
+
+      // Filter out tech admin UID if it was ever added to linkedOldUids
+      const techAdminUids = new Set(others.filter(o => o.email === TECH_ADMIN_EMAIL).map(o => o.uid));
+      const cleanLinkedUids = ownLinkedUids.filter(uid => !techAdminUids.has(uid));
+      setLinkedOldUids(cleanLinkedUids);
+
+      // Only mark colors as taken if they belong to a different team member (not own doc, same email, or Juan alias)
+      others.forEach(other => {
+        const isSameUserAlias =
+          (currentEmail && other.email === currentEmail) ||
+          (isCurrentUserJuan && other.email !== TECH_ADMIN_EMAIL && (other.isAutoJuan || cleanLinkedUids.includes(other.uid)));
+        if (!isSameUserAlias && other.color) {
+          colors.push(other.color.toUpperCase());
+        }
+      });
+
       setTakenColors(colors);
     });
 
     return () => unsub();
-  }, [currentUser]);
+  }, [currentUser, isCurrentUserJuan]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,12 +99,16 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     try {
       // 1. First attempt to update regular Firestore payload and general display name
       const userRef = doc(db, 'users_config', currentUser.uid);
-      await updateDoc(userRef, {
+      const updatePayload: Record<string, any> = {
         displayName: displayName.trim(),
         email: email.trim(),
         color: selectedColor,
         updatedAt: Date.now()
-      });
+      };
+      if (isAdmin) {
+        updatePayload.linkedOldUids = linkedOldUids;
+      }
+      await updateDoc(userRef, updatePayload);
 
       // Update Firebase Auth DisplayName
       await updateProfile(currentUser, {

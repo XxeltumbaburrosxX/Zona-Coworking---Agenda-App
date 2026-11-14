@@ -134,6 +134,69 @@ export function getRoomForEvent(evt: Partial<EventData>): Room | null {
 
   return null;
 }
-export const LOGO_COLOR = "https://i.ibb.co/ZzzzFy6S/Logo.png";
+export const LOGO_COLOR = "https://i.ibb.co/m5c2dprT/Logo.png";
 export const ICON_WHITE = "https://i.ibb.co/pvPcNWzD/Icono-Negativoo.png";
-export const ICON_COLOR = "https://i.ibb.co/HfL8FrzP/Icono.png";
+export const ICON_COLOR = "https://i.ibb.co/hJYD6KQC/Icono.png";
+export const ICON_AGENDA = "https://i.ibb.co/tPLW9qQx/Icono-Agenda-ZC.png";
+
+export interface UserProfileEntry {
+  color?: string;
+  displayName?: string;
+  email?: string;
+  linkedOldUids?: string[];
+}
+
+export function normalizeText(str?: string | null): string {
+  if (!str) return '';
+  return str
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+export function isJuanName(name?: string | null): boolean {
+  const n = normalizeText(name);
+  return n === 'juan' || n === 'juan medina';
+}
+
+export const TECH_ADMIN_EMAIL = 'adminf@zonacoworking.com';
+
+export function isJuanProfile(profile?: { email?: string; displayName?: string } | null): boolean {
+  if (!profile) return false;
+  const email = (profile.email || '').trim().toLowerCase();
+  if (email === TECH_ADMIN_EMAIL) return false;
+  if (email === ADMIN_EMAIL.toLowerCase()) return true;
+  const username = email.split('@')[0];
+  if (username === 'juan' || username.startsWith('juan.') || username.startsWith('juan_') || username === 'jumesco') {
+    return true;
+  }
+  return isJuanName(profile.displayName);
+}
+
+export function getJuanAdminUid(usersProfile?: Record<string, UserProfileEntry>): string | null {
+  if (!usersProfile) return null;
+  for (const [uid, prof] of Object.entries(usersProfile)) {
+    if ((prof.email || '').trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      return uid;
+    }
+  }
+  return null;
+}
+
+export function isJuanUid(uid?: string | null, usersProfile?: Record<string, UserProfileEntry>): boolean {
+  if (!uid || !usersProfile) return false;
+  const prof = usersProfile[uid];
+  if (prof && (prof.email || '').trim().toLowerCase() === TECH_ADMIN_EMAIL) {
+    return false;
+  }
+  if (prof && isJuanProfile(prof)) return true;
+
+  const adminUid = getJuanAdminUid(usersProfile);
+  if (adminUid) {
+    if (uid === adminUid) return true;
+    if (usersProfile[adminUid]?.linkedOldUids?.includes(uid)) return true;
+  }
+  return false;
+}
+

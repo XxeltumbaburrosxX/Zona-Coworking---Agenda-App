@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { EventData, getRoomForEvent } from '../types';
+import { EventData, getRoomForEvent, UserProfileEntry, isJuanProfile, isJuanUid, isJuanName } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Receipt, ChevronRight, ChevronDown, ChevronUp, CalendarClock, AlertCircle, Coins } from 'lucide-react';
@@ -8,7 +8,7 @@ import { User } from 'firebase/auth';
 interface Props {
   events: EventData[];
   currentUser: User | null;
-  usersProfile?: Record<string, { color?: string; displayName?: string; email?: string }>;
+  usersProfile?: Record<string, UserProfileEntry>;
   onSelectEvent: (event: EventData) => void;
 }
 
@@ -43,19 +43,31 @@ export function PendingPaymentsNotice({ events, currentUser, usersProfile = {}, 
         continue;
       }
 
-      // 2. Filter strictly by reservation creator (createdBy matches current user UID or fallback name)
-      const matchesUid = !!(event.createdBy && event.createdBy === currentUser.uid);
+      // 2. Filter strictly by reservation creator (createdBy matches current user UID, unified Juan alias, or fallback name)
+      const isCurrentUserJuan = isJuanProfile({
+        email: currentUser.email || '',
+        displayName: usersProfile[currentUser.uid]?.displayName || currentUser.displayName || ''
+      });
+      const matchesUid = !!(event.createdBy && (
+        event.createdBy === currentUser.uid ||
+        (isCurrentUserJuan && isJuanUid(event.createdBy, usersProfile))
+      ));
       let matchesCreatorName = false;
 
-      if (!matchesUid && !event.createdBy && event.createdBy_Name) {
+      if (!matchesUid && event.createdBy_Name) {
         const creatorName = event.createdBy_Name.trim().toLowerCase();
         const currentDisplayName = (currentUser.displayName || '').trim().toLowerCase();
         const currentEmail = (currentUser.email || '').trim().toLowerCase();
         const profileDisplayName = (usersProfile[currentUser.uid]?.displayName || '').trim().toLowerCase();
 
-        if (currentDisplayName && creatorName === currentDisplayName) matchesCreatorName = true;
-        else if (currentEmail && creatorName === currentEmail) matchesCreatorName = true;
-        else if (profileDisplayName && creatorName === profileDisplayName) matchesCreatorName = true;
+        if (!event.createdBy) {
+          if (currentDisplayName && creatorName === currentDisplayName) matchesCreatorName = true;
+          else if (currentEmail && creatorName === currentEmail) matchesCreatorName = true;
+          else if (profileDisplayName && creatorName === profileDisplayName) matchesCreatorName = true;
+        }
+        if (!matchesCreatorName && isCurrentUserJuan && !usersProfile[event.createdBy] && isJuanName(event.createdBy_Name)) {
+          matchesCreatorName = true;
+        }
       }
 
       if (!matchesUid && !matchesCreatorName) {

@@ -1,8 +1,12 @@
-const CACHE_NAME = 'zona-coworking-v2';
+const CACHE_NAME = 'zona-coworking-v3';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/pwa-maskable-512x512.png',
+  '/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -65,7 +69,7 @@ self.addEventListener('push', event => {
     const title = payload.title || 'Notification';
     const options = {
       body: payload.body || 'New message',
-      icon: 'https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png',
+      icon: 'https://i.ibb.co/tPLW9qQx/Icono-Agenda-ZC.png',
       vibrate: [200, 100, 200]
     };
     event.waitUntil(

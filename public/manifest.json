@@ -1,33 +1,37 @@
 {
+  "id": "/",
   "name": "Zona Coworking Dashboard",
-  "short_name": "Dashboard",
-  "description": "Herramienta de gestión para Zona Coworking",
+  "short_name": "Zona Agenda",
+  "description": "Herramienta de gestión y agenda para Zona Coworking",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#182865",
   "theme_color": "#182865",
   "icons": [
     {
-      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/tPLW9qQx/Icono-Agenda-ZC.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

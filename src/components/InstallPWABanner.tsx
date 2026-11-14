@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ICON_AGENDA } from '../types';
 
 let deferredPrompt: any = null;
 
@@ -147,7 +148,7 @@ export function InstallPWABanner() {
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 relative z-10">
             <div className="flex items-center gap-3 overflow-hidden flex-1">
               <div className="flex-shrink-0 w-9 h-9 bg-white/10 backdrop-blur-md rounded-xl overflow-hidden shadow-md border border-white/15">
-                <img src="https://i.ibb.co/Wp4cVb35/Icono-Agenda-ZC.png" alt="Icono" className="w-full h-full object-cover" />
+                <img src={ICON_AGENDA} alt="Icono" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-extrabold text-sm flex items-center gap-1.5 truncate text-white leading-normal">

@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { db, auth } from '../firebase';
 import { collection, doc, setDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { updatePassword, updateProfile } from 'firebase/auth';
-import { COLOR_OPTIONS, LOGO_COLOR } from '../types';
+import { COLOR_OPTIONS, LOGO_COLOR, isJuanProfile } from '../types';
 import { CheckCircle2, Lock, ShieldAlert, User, Paintbrush } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -29,12 +29,18 @@ export function ColorSelectionScreen({ onComplete }: { onComplete: () => void })
       let foundUserOldColor: string | null = null;
       let foundUserOldName: string = '';
 
+      const currentIsJuan = isJuanProfile({
+        email: auth?.currentUser?.email || '',
+        displayName: auth?.currentUser?.displayName || ''
+      });
+
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         const docEmail = data.email?.toLowerCase();
         
         const isOwnDoc = docSnap.id === currentUid;
         const hasSameEmail = currentEmail && docEmail === currentEmail;
+        const isJuanAlias = currentIsJuan && isJuanProfile({ email: data.email, displayName: data.displayName });
 
         if (isOwnDoc || hasSameEmail) {
           if (data.color) {
@@ -46,7 +52,7 @@ export function ColorSelectionScreen({ onComplete }: { onComplete: () => void })
           if (docSnap.id !== currentUid) {
             staleIds.push(docSnap.id);
           }
-        } else {
+        } else if (!isJuanAlias) {
           if (data.color) {
             colors.push(data.color.toUpperCase());
           }

@@ -8,7 +8,7 @@ import { db, auth } from './firebase';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-import { EventData, ROOMS, LOGO_COLOR, getRoomForEvent, AgendaItemType, ADMIN_EMAIL } from './types';
+import { EventData, ROOMS, LOGO_COLOR, ICON_COLOR, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, TECH_ADMIN_EMAIL, UserProfileEntry, getJuanAdminUid, isJuanUid, isJuanName } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { ColorSelectionScreen } from './components/ColorSelectionScreen';
 import { CalendarGrid } from './components/CalendarGrid';
@@ -31,7 +31,7 @@ export default function App() {
   
   // User Config State
   const [usersConfig, setUsersConfig] = useState<Record<string, string>>({});
-  const [usersProfile, setUsersProfile] = useState<Record<string, { color?: string; displayName?: string; email?: string }>>({});
+  const [usersProfile, setUsersProfile] = useState<Record<string, UserProfileEntry>>({});
   const [isColorSelectionRequired, setIsColorSelectionRequired] = useState(false);
   const [userConfigLoaded, setUserConfigLoaded] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -122,7 +122,7 @@ export default function App() {
     if (!user || !db) return;
     const unsubUsers = onSnapshot(collection(db, 'users_config'), (snapshot) => {
       const configMap: Record<string, string> = {};
-      const profileMap: Record<string, { color?: string; displayName?: string; email?: string }> = {};
+      const profileMap: Record<string, UserProfileEntry> = {};
       let currentUserHasColor = false;
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
@@ -132,12 +132,31 @@ export default function App() {
         profileMap[docSnap.id] = {
           color: data.color || '',
           displayName: data.displayName || '',
-          email: data.email || ''
+          email: data.email || '',
+          linkedOldUids: Array.isArray(data.linkedOldUids) ? data.linkedOldUids : []
         };
         if (docSnap.id === user.uid && data.color) {
           currentUserHasColor = true;
         }
       });
+
+      // Unify Juan's active metrics profile color across any old Juan UIDs / linked UIDs
+      const juanAdminUid = getJuanAdminUid(profileMap);
+      const juanUnifiedColor = juanAdminUid ? profileMap[juanAdminUid]?.color : undefined;
+      if (juanAdminUid && juanUnifiedColor) {
+        Object.keys(profileMap).forEach(uid => {
+          if (isJuanUid(uid, profileMap)) {
+            configMap[uid] = juanUnifiedColor;
+          }
+        });
+        (profileMap[juanAdminUid]?.linkedOldUids || []).forEach(oldUid => {
+          const oldEmail = (profileMap[oldUid]?.email || '').trim().toLowerCase();
+          if (oldUid && oldEmail !== TECH_ADMIN_EMAIL) {
+            configMap[oldUid] = juanUnifiedColor;
+          }
+        });
+      }
+
       setUsersConfig(configMap);
       setUsersProfile(profileMap);
       setIsColorSelectionRequired(!currentUserHasColor);
@@ -191,6 +210,29 @@ export default function App() {
   const formattedSelectedDate = new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { 
     weekday: 'long', day: 'numeric', month: 'long' 
   });
+
+  const juanAdminUid = getJuanAdminUid(usersProfile);
+  const juanUnifiedColor = juanAdminUid ? usersConfig[juanAdminUid] : undefined;
+  const juanUnifiedFirstName = juanAdminUid && usersProfile[juanAdminUid]?.displayName
+    ? usersProfile[juanAdminUid].displayName!.trim().split(' ')[0]
+    : undefined;
+
+  const getEventCreatorColor = (evt: EventData, fallback: string) => {
+    if (usersConfig[evt.createdBy]) return usersConfig[evt.createdBy];
+    if (juanUnifiedColor && (isJuanUid(evt.createdBy, usersProfile) || isJuanName(evt.createdBy_Name))) {
+      return juanUnifiedColor;
+    }
+    return fallback;
+  };
+
+  const getEventCreatorFirstName = (evt: EventData, fallback = 'Staff') => {
+    if (isJuanUid(evt.createdBy, usersProfile) || (!usersProfile[evt.createdBy] && isJuanName(evt.createdBy_Name))) {
+      return juanUnifiedFirstName || evt.createdBy_Name?.split(' ')[0] || 'Juan';
+    }
+    const profName = usersProfile[evt.createdBy]?.displayName;
+    if (profName) return profName.trim().split(' ')[0];
+    return evt.createdBy_Name?.split(' ')[0] || fallback;
+  };
 
 
   return (
@@ -336,7 +378,7 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <img src={LOGO_COLOR} alt="Zona" className="h-5 object-contain" />
+              <img src={ICON_COLOR} alt="Zona Coworking" className="h-8 w-8 object-contain" />
               <button onClick={() => setShowLogoutConfirm(true)} className="text-slate-400 hover:text-red-500 p-2 shrink-0">
                 <LogOut size={20} />
               </button>
@@ -436,6 +478,7 @@ export default function App() {
                       <CalendarGrid 
                         events={filteredEvents} 
                         usersConfig={usersConfig}
+                        usersProfile={usersProfile}
                         selectedDateStr={selectedDateStr} 
                         onSelectDate={setSelectedDateStr}
                         currentDate={currentDate}
@@ -563,8 +606,8 @@ export default function App() {
                                         <span>{isDone ? '✓ Tarea completada' : '📌 Tarea interna'}</span>
                                       </div>
                                       <div className="flex items-center gap-1.5 ml-auto">
-                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: usersConfig[evt.createdBy] || (isDone ? '#10B981' : '#F59E0B') }} title={evt.createdBy_Name}></span>
-                                        <span className="text-[10px] uppercase text-slate-400">{evt.createdBy_Name?.split(' ')[0] || 'Staff'}</span>
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getEventCreatorColor(evt, isDone ? '#10B981' : '#F59E0B') }} title={evt.createdBy_Name}></span>
+                                        <span className="text-[10px] uppercase text-slate-400">{getEventCreatorFirstName(evt)}</span>
                                       </div>
                                     </div>
                                   </motion.div>
@@ -619,8 +662,8 @@ export default function App() {
                                         </div>
                                       )}
                                       <div className="flex items-center gap-1.5 ml-auto">
-                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: usersConfig[evt.createdBy] || '#8B5CF6' }} title={evt.createdBy_Name}></span>
-                                        <span className="text-[10px] uppercase text-slate-400">{evt.createdBy_Name?.split(' ')[0] || 'Staff'}</span>
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getEventCreatorColor(evt, '#8B5CF6') }} title={evt.createdBy_Name}></span>
+                                        <span className="text-[10px] uppercase text-slate-400">{getEventCreatorFirstName(evt)}</span>
                                       </div>
                                     </div>
                                   </motion.div>
@@ -638,7 +681,7 @@ export default function App() {
                                   transition={{ delay: idx * 0.05 }}
                                   className="group bg-white border border-slate-100 hover:border-brand-blue/20 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
                                 >
-                                  <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: usersConfig[evt.createdBy] || '#182865' }} />
+                                  <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: getEventCreatorColor(evt, '#182865') }} />
                                   
                                   <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
                                     <h4 className="text-base font-bold text-brand-blue leading-tight min-w-0 pr-2">
@@ -681,8 +724,8 @@ export default function App() {
                                       <span>{evt.type}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 ml-auto">
-                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: usersConfig[evt.createdBy] || '#182865' }} title={evt.createdBy_Name}></span>
-                                      <span className="text-[10px] uppercase text-slate-400">{evt.createdBy_Name?.split(' ')[0]}</span>
+                                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getEventCreatorColor(evt, '#182865') }} title={evt.createdBy_Name}></span>
+                                      <span className="text-[10px] uppercase text-slate-400">{getEventCreatorFirstName(evt, '')}</span>
                                     </div>
                                   </div>
                                 </motion.div>

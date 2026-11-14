@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
-import { EventData, ROOMS, getRoomForEvent } from '../types';
+import { EventData, ROOMS, getRoomForEvent, UserProfileEntry, getJuanAdminUid, isJuanUid, isJuanName } from '../types';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertTriangle } from 'lucide-react';
 
 interface CalendarGridProps {
   events: EventData[];
   usersConfig: Record<string, string>;
+  usersProfile?: Record<string, UserProfileEntry>;
   selectedDateStr: string;
   onSelectDate: (dateStr: string) => void;
   currentDate: Date;
   setCurrentDate: React.Dispatch<React.SetStateAction<Date>>;
 }
 
-export function CalendarGrid({ events, usersConfig, selectedDateStr, onSelectDate, currentDate, setCurrentDate }: CalendarGridProps) {
+export function CalendarGrid({ events, usersConfig, usersProfile, selectedDateStr, onSelectDate, currentDate, setCurrentDate }: CalendarGridProps) {
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   
@@ -66,11 +67,18 @@ export function CalendarGrid({ events, usersConfig, selectedDateStr, onSelectDat
           const totalAttendees = commercialDayEvents.reduce((acc, e) => acc + (e.attendees || 0), 0);
           const showWarning = totalAttendees >= totalDailyCapacity * 0.8;
 
+          const juanAdminUid = getJuanAdminUid(usersProfile);
+          const juanUnifiedColor = juanAdminUid ? usersConfig[juanAdminUid] : undefined;
+
           // Deduplicate indicators for dots (Recordatorios: amarillo, Reuniones: violeta, Reservas: usuario o salón)
           const dotColors = Array.from(new Set(dayEventsList.map(e => {
             if (e.itemType === 'recordatorio') return '#EAB308';
             if (e.itemType === 'reunion') return '#8B5CF6';
-            return usersConfig[e.createdBy] || getRoomForEvent(e)?.dotColor || '#182865';
+            if (usersConfig[e.createdBy]) return usersConfig[e.createdBy];
+            if (juanUnifiedColor && (isJuanUid(e.createdBy, usersProfile) || isJuanName(e.createdBy_Name))) {
+              return juanUnifiedColor;
+            }
+            return getRoomForEvent(e)?.dotColor || '#182865';
           }))).slice(0, 4);
 
           return (

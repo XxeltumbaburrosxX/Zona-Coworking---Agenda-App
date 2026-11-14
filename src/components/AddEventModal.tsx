@@ -5,14 +5,14 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db, auth } from '../firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType, ADMIN_EMAIL } from '../types';
+import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, UserProfileEntry, isJuanUid } from '../types';
 
 interface Props {
   onClose: () => void;
   selectedDateStr: string;
   editingEvent?: EventData | null;
   initialItemType?: AgendaItemType;
-  usersProfile?: Record<string, { color?: string; displayName?: string; email?: string }>;
+  usersProfile?: Record<string, UserProfileEntry>;
 }
 
 export function formatClientName(value: string): string {
@@ -127,6 +127,9 @@ export function AddEventModal({ onClose, selectedDateStr, editingEvent, initialI
       
       // If legacy event without explicit salesRep, resolve from creator UID / email / name
       const creatorUid = editingEvent.createdBy;
+      if (isJuanUid(creatorUid, usersProfile)) {
+        return 'Juan';
+      }
       const creatorProfile = creatorUid && usersProfile ? usersProfile[creatorUid] : undefined;
       const creatorEmail = (creatorProfile?.email || '').toLowerCase().trim();
       const creatorUsername = creatorEmail.split('@')[0];
