@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Zona Coworking Dashboard",
-  "short_name": "Zona Agenda",
+  "name": "Dashboard",
+  "short_name": "Dashboard",
   "description": "Herramienta de gestión y agenda para Zona Coworking",
   "start_url": "/",
   "scope": "/",

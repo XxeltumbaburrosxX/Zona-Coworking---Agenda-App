@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zona-coworking-v3';
+const CACHE_NAME = 'zona-coworking-v4';
 const urlsToCache = [
   '/',
   '/index.html',
