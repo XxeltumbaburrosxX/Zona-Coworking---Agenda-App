@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { EventData, getRoomForEvent, UserProfileEntry, isJuanProfile, isJuanUid, isJuanName } from '../types';
+import { EventData, getRoomForEvent, UserProfileEntry, isJuanProfile, isJuanUid, isJuanName, formatTime12h } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Receipt, ChevronRight, ChevronDown, ChevronUp, CalendarClock, AlertCircle, Coins } from 'lucide-react';
@@ -121,13 +121,7 @@ export function PendingPaymentsNotice({ events, currentUser, usersProfile = {}, 
       }
 
       // 12-hour formatted start time
-      let formattedTime = event.startTime || '';
-      if (event.startTime && event.startTime.includes(':')) {
-        const [h, m] = event.startTime.split(':').map(Number);
-        const period = h >= 12 ? 'PM' : 'AM';
-        const hour12 = h % 12 || 12;
-        formattedTime = `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
-      }
+      const formattedTime = formatTime12h(event.startTime);
 
       // Determine smart status & message based on temporal context
       let statusBadge = 'Pago pendiente';

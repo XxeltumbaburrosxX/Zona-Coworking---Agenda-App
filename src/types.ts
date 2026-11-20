@@ -200,3 +200,24 @@ export function isJuanUid(uid?: string | null, usersProfile?: Record<string, Use
   return false;
 }
 
+export function formatTime12h(timeStr?: string | null): string {
+  if (!timeStr) return '';
+  const trimmed = timeStr.trim();
+  if (!trimmed) return '';
+  if (/[ap]\s*\.?\s*m\.?/i.test(trimmed)) return trimmed.toUpperCase();
+  const parts = trimmed.split(':');
+  if (parts.length < 2) return trimmed;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (Number.isNaN(h) || Number.isNaN(m)) return trimmed;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
+}
+
+export function formatTimeRange12h(start?: string | null, end?: string | null): string {
+  const s = formatTime12h(start);
+  const e = formatTime12h(end);
+  if (s && e) return `${s} - ${e}`;
+  return s || e || '';
+}

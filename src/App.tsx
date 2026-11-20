@@ -8,7 +8,7 @@ import { db, auth } from './firebase';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 
-import { EventData, ROOMS, LOGO_COLOR, ICON_COLOR, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, TECH_ADMIN_EMAIL, UserProfileEntry, getJuanAdminUid, isJuanUid, isJuanName } from './types';
+import { EventData, ROOMS, LOGO_COLOR, ICON_COLOR, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, TECH_ADMIN_EMAIL, UserProfileEntry, getJuanAdminUid, isJuanUid, isJuanName, formatTime12h, formatTimeRange12h } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { ColorSelectionScreen } from './components/ColorSelectionScreen';
 import { CalendarGrid } from './components/CalendarGrid';
@@ -585,9 +585,9 @@ export default function App() {
                                           <span>{isDone ? 'Completado' : 'Recordatorio'}</span>
                                         </div>
                                         {evt.startTime ? (
-                                          <div className="flex items-center text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-lg">
-                                            <Clock size={11} className="mr-1 text-slate-500" />
-                                            {evt.startTime}
+                                          <div className="flex items-center text-[11px] sm:text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-lg border border-slate-200/80 tabular-nums">
+                                            <Clock size={12} className="mr-1 text-amber-600 stroke-[2.5]" />
+                                            {formatTime12h(evt.startTime)}
                                           </div>
                                         ) : (
                                           <div className="flex items-center text-[10px] sm:text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg">
@@ -628,18 +628,22 @@ export default function App() {
                                   >
                                     <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-purple-600" />
                                     
-                                    <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
-                                      <h4 className="text-base font-bold text-purple-950 leading-tight min-w-0 pr-2">
-                                        {evt.eventName}
-                                      </h4>
+                                    <div className="flex justify-between items-start mb-2 pl-2 gap-2">
+                                      <div className="min-w-0 pr-2 space-y-1.5">
+                                        <h4 className="text-base font-bold text-purple-950 leading-tight">
+                                          {evt.eventName}
+                                        </h4>
+                                        {(evt.startTime || evt.endTime) && (
+                                          <div className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-extrabold bg-purple-50 text-purple-950 px-2.5 py-1 rounded-lg border border-purple-200/90 tabular-nums">
+                                            <Clock size={14} className="text-purple-600 stroke-[2.5] shrink-0" />
+                                            <span>{formatTimeRange12h(evt.startTime, evt.endTime)}</span>
+                                          </div>
+                                        )}
+                                      </div>
                                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                                         <div className="flex items-center text-[10px] sm:text-xs font-bold bg-purple-50 text-purple-900 px-2.5 py-1 rounded-lg border border-purple-200 gap-1.5 shrink-0">
                                           <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
                                           <span>Reunión</span>
-                                        </div>
-                                        <div className="flex items-center text-[10px] sm:text-xs font-medium bg-purple-50 text-purple-800 px-2.5 py-1 rounded-lg border border-purple-200/60">
-                                          <Clock size={11} className="mr-1.5 text-purple-600" />
-                                          {evt.startTime} - {evt.endTime}
                                         </div>
                                       </div>
                                     </div>
@@ -683,15 +687,19 @@ export default function App() {
                                 >
                                   <div className="absolute top-0 left-0 bottom-0 w-1.5" style={{ backgroundColor: getEventCreatorColor(evt, '#182865') }} />
                                   
-                                  <div className="flex justify-between items-start mb-1.5 pl-2 gap-2">
-                                    <h4 className="text-base font-bold text-brand-blue leading-tight min-w-0 pr-2">
-                                      {evt.eventName}
-                                    </h4>
+                                  <div className="flex justify-between items-start mb-2 pl-2 gap-2">
+                                    <div className="min-w-0 pr-2 space-y-1.5">
+                                      <h4 className="text-base font-bold text-brand-blue leading-tight">
+                                        {evt.eventName}
+                                      </h4>
+                                      {(evt.startTime || evt.endTime) && (
+                                        <div className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-extrabold bg-orange-50/95 text-[#182865] px-2.5 py-1 rounded-lg border border-orange-200/90 tabular-nums shadow-2xs">
+                                          <Clock size={14} className="text-[#FF9305] stroke-[2.5] shrink-0" />
+                                          <span>{formatTimeRange12h(evt.startTime, evt.endTime)}</span>
+                                        </div>
+                                      )}
+                                    </div>
                                     <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                      <div className="flex items-center text-[10px] sm:text-xs font-medium bg-brand-orange/10 text-[#CC7604] px-2.5 py-1 rounded-lg border border-brand-orange/20">
-                                        <Clock size={12} className="mr-1.5 text-brand-orange/70" />
-                                        {evt.startTime} - {evt.endTime}
-                                      </div>
                                       {evt.reservationStatus === 'Pre-reserva' && (
                                         <div className="flex items-center text-[10px] sm:text-xs font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded-lg border border-amber-300/80 gap-1.5 shrink-0">
                                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>

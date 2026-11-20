@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { EventData, getRoomForEvent } from '../types';
+import { EventData, getRoomForEvent, formatTime12h } from '../types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BookmarkCheck, ChevronRight, ChevronDown, ChevronUp, AlertCircle, CalendarClock } from 'lucide-react';
@@ -46,13 +46,7 @@ export function PendingPreReservationsNotice({ events, onSelectEvent }: Props) {
       }
 
       // 12-hour formatted start time
-      let formattedTime = event.startTime;
-      if (event.startTime && event.startTime.includes(':')) {
-        const [h, m] = event.startTime.split(':').map(Number);
-        const period = h >= 12 ? 'PM' : 'AM';
-        const hour12 = h % 12 || 12;
-        formattedTime = `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
-      }
+      const formattedTime = formatTime12h(event.startTime);
 
       // Determine smart status & message based on days difference
       let statusBadge = 'Pre-reserva pendiente';

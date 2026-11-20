@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { db, auth } from '../firebase';
 import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, getDocs } from 'firebase/firestore';
-import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, UserProfileEntry, isJuanUid } from '../types';
+import { EVENT_TYPES, ROOMS, EventData, EventType, RoomLayout, getRoomForEvent, AgendaItemType, ADMIN_EMAIL, UserProfileEntry, isJuanUid, formatTime12h, formatTimeRange12h } from '../types';
 
 interface Props {
   onClose: () => void;
@@ -562,7 +562,7 @@ END:VCALENDAR`;
     const finalType = type === 'Otros' ? customType : type;
     const statusLabel = reservationStatus === 'Pre-reserva' ? '🟡 Pre-reserva Pendiente' : '⚡ Confirmado y Sincronizado';
 
-    const message = `📊 *REPORTES ZONA COWORKING* 📊\n📅 *Fecha:* ${capitalizedDate}\n\n🚪 *Espacio:* ${roomName}\n👥 *Evento:* ${eventName} (${finalType})\n👥 *Asistencia Planeada:* ${attendees} personas\n⏰ *Horario:* ${startTime} - ${endTime}\n\n🛠️ *Servicios y Notas Extra:*\n${notes || (resources.water || resources.coffee || resources.tv ? 'Incluye recursos logísticos estándar.' : 'Ninguna nota especial.')}\n\n*Estado:* ${statusLabel}.`;
+    const message = `📊 *REPORTES ZONA COWORKING* 📊\n📅 *Fecha:* ${capitalizedDate}\n\n🚪 *Espacio:* ${roomName}\n👥 *Evento:* ${eventName} (${finalType})\n👥 *Asistencia Planeada:* ${attendees} personas\n⏰ *Horario:* ${formatTimeRange12h(startTime, endTime)}\n\n🛠️ *Servicios y Notas Extra:*\n${notes || (resources.water || resources.coffee || resources.tv ? 'Incluye recursos logísticos estándar.' : 'Ninguna nota especial.')}\n\n*Estado:* ${statusLabel}.`;
     
     const encodedUri = encodeURIComponent(message);
     window.open(`https://wa.me/?text=${encodedUri}`, '_blank');
@@ -597,7 +597,7 @@ END:VCALENDAR`;
             const isReunion = existing.itemType === 'reunion';
             const isPre = existing.reservationStatus === 'Pre-reserva';
             const statusLabel = isReunion ? 'Reunión de equipo' : (isPre ? 'Pre-reserva pendiente' : 'Ocupado por');
-            conflicts.push(`${formattedDate} (${dStart} - ${dEnd}) (${statusLabel}: "${existing.eventName}")`);
+            conflicts.push(`${formattedDate} (${formatTimeRange12h(dStart, dEnd)}) (${statusLabel}: "${existing.eventName}")`);
           }
         }
       });
@@ -631,7 +631,7 @@ END:VCALENDAR`;
           const isReunion = existing.itemType === 'reunion';
           const isPre = existing.reservationStatus === 'Pre-reserva';
           const statusLabel = isReunion ? 'Reunión de equipo' : (isPre ? 'Pre-reserva pendiente' : 'Ocupado por');
-          conflicts.push(`${formattedDate} (${targetStart} - ${targetEnd}) (${statusLabel}: "${existing.eventName}")`);
+          conflicts.push(`${formattedDate} (${formatTimeRange12h(targetStart, targetEnd)}) (${statusLabel}: "${existing.eventName}")`);
         }
       }
     });
@@ -714,12 +714,12 @@ END:VCALENDAR`;
             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
               <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Fecha Actual</span>
               <p class="font-bold text-slate-800 capitalize">${currentFormatted}</p>
-              <p class="text-xs text-slate-500 font-medium">${editingEvent.startTime} - ${editingEvent.endTime}</p>
+              <p class="text-xs text-slate-500 font-medium">${formatTimeRange12h(editingEvent.startTime, editingEvent.endTime)}</p>
             </div>
             <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
               <span class="text-[11px] font-bold text-amber-700 uppercase tracking-wider block mb-0.5">Nueva Fecha Reagendada 🔄</span>
               <p class="font-bold text-amber-900 capitalize">${newFormatted}</p>
-              <p class="text-xs text-amber-700 font-medium">${rescheduleStartTime} - ${rescheduleEndTime}</p>
+              <p class="text-xs text-amber-700 font-medium">${formatTimeRange12h(rescheduleStartTime, rescheduleEndTime)}</p>
             </div>
             <p class="text-xs text-slate-500 font-medium leading-relaxed">
               Se conservará la fecha original (${formatDateObj(origDate)}) como historial.
@@ -1470,9 +1470,16 @@ END:VCALENDAR`;
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
-                        <Clock size={15} className="text-amber-600" />
-                        Nueva Hora Inicio
+                      <label className="text-xs font-bold text-slate-700 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={15} className="text-amber-600" />
+                          Nueva Hora Inicio
+                        </span>
+                        {rescheduleStartTime && (
+                          <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md tabular-nums">
+                            {formatTime12h(rescheduleStartTime)}
+                          </span>
+                        )}
                       </label>
                       <input 
                         type="time" 
@@ -1482,9 +1489,16 @@ END:VCALENDAR`;
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
-                        <Clock size={15} className="text-amber-600" />
-                        Nueva Hora Fin
+                      <label className="text-xs font-bold text-slate-700 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={15} className="text-amber-600" />
+                          Nueva Hora Fin
+                        </span>
+                        {rescheduleEndTime && (
+                          <span className="text-[11px] font-extrabold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md tabular-nums">
+                            {formatTime12h(rescheduleEndTime)}
+                          </span>
+                        )}
                       </label>
                       <input 
                         type="time" 
@@ -1560,7 +1574,13 @@ END:VCALENDAR`;
                         <Clock size={16} className="text-amber-600" />
                         <span>Hora Puntual</span>
                       </span>
-                      <span className="text-[11px] font-normal text-slate-400">Opcional</span>
+                      {startTime ? (
+                        <span className="text-xs font-extrabold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md tabular-nums">
+                          {formatTime12h(startTime)}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-normal text-slate-400">Opcional</span>
+                      )}
                     </label>
                     <input
                       type="time"
@@ -1677,10 +1697,17 @@ END:VCALENDAR`;
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      <Clock size={16} className="text-purple-600" />
-                      <span>Hora Inicio</span>
-                      <span className="text-red-500">*</span>
+                    <label className="text-sm font-bold text-slate-700 flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Clock size={16} className="text-purple-600" />
+                        <span>Hora Inicio</span>
+                        <span className="text-red-500">*</span>
+                      </span>
+                      {startTime && (
+                        <span className="text-xs font-extrabold text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md tabular-nums">
+                          {formatTime12h(startTime)}
+                        </span>
+                      )}
                     </label>
                     <input
                       type="time"
@@ -1692,10 +1719,17 @@ END:VCALENDAR`;
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      <Clock size={16} className="text-purple-600" />
-                      <span>Hora Fin</span>
-                      <span className="text-red-500">*</span>
+                    <label className="text-sm font-bold text-slate-700 flex items-center justify-between gap-1.5">
+                      <span className="flex items-center gap-1.5">
+                        <Clock size={16} className="text-purple-600" />
+                        <span>Hora Fin</span>
+                        <span className="text-red-500">*</span>
+                      </span>
+                      {endTime && (
+                        <span className="text-xs font-extrabold text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md tabular-nums">
+                          {formatTime12h(endTime)}
+                        </span>
+                      )}
                     </label>
                     <input
                       type="time"
@@ -2025,7 +2059,7 @@ END:VCALENDAR`;
                                   📅 Fechas e horarios ({targetDates.length}):
                                 </span>
                                 <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">
-                                  Default: {startTime || '--:--'} a {endTime || '--:--'}
+                                  Default: {startTime && endTime ? formatTimeRange12h(startTime, endTime) : `${formatTime12h(startTime) || '--:--'} a ${formatTime12h(endTime) || '--:--'}`}
                                 </span>
                               </div>
 
@@ -2047,8 +2081,8 @@ END:VCALENDAR`;
                                           <div className="min-w-0">
                                             <p className="text-xs font-bold text-slate-800 truncate capitalize">{formatted}</p>
                                             <div className="flex items-center gap-1.5 mt-0.5">
-                                              <span className={`text-[11px] font-semibold flex items-center gap-1 ${hasCustomTime ? 'text-amber-700 font-bold' : 'text-slate-500'}`}>
-                                                <Clock size={12} /> {schedule.startTime || '--:--'} - {schedule.endTime || '--:--'}
+                                              <span className={`text-[11px] font-semibold flex items-center gap-1 tabular-nums ${hasCustomTime ? 'text-amber-700 font-bold' : 'text-slate-600'}`}>
+                                                <Clock size={12} /> {schedule.startTime && schedule.endTime ? formatTimeRange12h(schedule.startTime, schedule.endTime) : `${formatTime12h(schedule.startTime) || '--:--'} - ${formatTime12h(schedule.endTime) || '--:--'}`}
                                               </span>
                                               {hasCustomTime && (
                                                 <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded-md">
@@ -2105,7 +2139,10 @@ END:VCALENDAR`;
 
                                           <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                              <label className="text-[10px] font-bold text-slate-600 block mb-1">Hora Inicio</label>
+                                              <label className="text-[10px] font-bold text-slate-600 flex items-center justify-between mb-1">
+                                                <span>Hora Inicio</span>
+                                                {schedule.startTime && <span className="text-amber-800 font-extrabold tabular-nums">{formatTime12h(schedule.startTime)}</span>}
+                                              </label>
                                               <input
                                                 type="time"
                                                 value={schedule.startTime}
@@ -2114,7 +2151,10 @@ END:VCALENDAR`;
                                               />
                                             </div>
                                             <div>
-                                              <label className="text-[10px] font-bold text-slate-600 block mb-1">Hora Fin</label>
+                                              <label className="text-[10px] font-bold text-slate-600 flex items-center justify-between mb-1">
+                                                <span>Hora Fin</span>
+                                                {schedule.endTime && <span className="text-amber-800 font-extrabold tabular-nums">{formatTime12h(schedule.endTime)}</span>}
+                                              </label>
                                               <input
                                                 type="time"
                                                 value={schedule.endTime}
@@ -2189,12 +2229,26 @@ END:VCALENDAR`;
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5 relative">
-                  <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Clock size={16}/> Inicio</label>
+                  <label className="text-sm font-semibold text-slate-600 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2"><Clock size={16}/> Inicio</span>
+                    {startTime && (
+                      <span className="text-xs font-extrabold text-brand-blue bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md tabular-nums">
+                        {formatTime12h(startTime)}
+                      </span>
+                    )}
+                  </label>
                   <input required type="time" value={startTime} onChange={e => setStartTime(e.target.value)} 
                     className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
                 </div>
                 <div className="space-y-1.5 relative">
-                  <label className="text-sm font-semibold text-slate-600 flex items-center gap-2"><Clock size={16}/> Fin</label>
+                  <label className="text-sm font-semibold text-slate-600 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2"><Clock size={16}/> Fin</span>
+                    {endTime && (
+                      <span className="text-xs font-extrabold text-brand-blue bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md tabular-nums">
+                        {formatTime12h(endTime)}
+                      </span>
+                    )}
+                  </label>
                   <input required type="time" value={endTime} onChange={e => setEndTime(e.target.value)} 
                     className="w-full px-4 py-3 h-12 min-h-[48px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue/20 focus:border-brand-blue transition-all" />
                 </div>
