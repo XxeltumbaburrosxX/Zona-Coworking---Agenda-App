@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calendar as CalendarIcon, Plus, PieChart, Share, 
-  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Hash, Settings, Sparkles, HelpCircle, RotateCcw, Check, Lock, User as UserIcon
+  LogOut, Clock, MapPin, Users, CheckCircle2, ChevronRight, Tag, Settings, Sparkles, HelpCircle, RotateCcw, Check, Lock, User as UserIcon
 } from 'lucide-react';
 import { db, auth } from './firebase';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
@@ -728,7 +728,7 @@ export default function App() {
                                       <span>{evt.attendees} pers</span>
                                     </div>
                                     <div className="flex items-center gap-1.5">
-                                      <Hash size={14} className="text-slate-400" />
+                                      <Tag size={14} className="text-slate-400" />
                                       <span>{evt.type}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 ml-auto">
